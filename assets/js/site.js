@@ -9,8 +9,7 @@
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  const params = new URLSearchParams(location.search);
-  const isPreview = params.has('preview');
+  const B = CS.backend;
   const reduceMotion = fx.reduceMotion;
   const body = document.body;
 
@@ -29,6 +28,8 @@
     statsCounted: false,
     analyticsLoaded: false,
     showRunning: false,
+    studio: false,
+    signedUp: false,
   };
 
   const store = {
@@ -44,7 +45,6 @@
   const locale = () => (state.lang === 'de' ? 'de-DE' : 'en-US');
 
   function pickLang(cfg) {
-    if (isPreview) return cfg.defaultLang === 'en' ? 'en' : 'de';
     const saved = store.get('cs-lang');
     if (saved === 'de' || saved === 'en') return saved;
     if (cfg.defaultLang === 'de' || cfg.defaultLang === 'en') return cfg.defaultLang;
@@ -54,19 +54,7 @@
   // ---------------------------------------------------------
   //  Konfiguration laden
   // ---------------------------------------------------------
-  async function loadConfig() {
-    if (isPreview) {
-      try {
-        const draft = localStorage.getItem('cs-preview-config');
-        if (draft) return U.merge(CS.DEFAULT_CONFIG, JSON.parse(draft));
-      } catch (e) { /* weiter */ }
-    }
-    try {
-      const res = await fetch('config.json?t=' + Date.now(), { cache: 'no-store' });
-      if (res.ok) return U.merge(CS.DEFAULT_CONFIG, await res.json());
-    } catch (e) { /* z. B. lokal als Datei geöffnet */ }
-    return U.clone(CS.DEFAULT_CONFIG);
-  }
+  const loadConfig = () => B.loadConfig();
 
   // ---------------------------------------------------------
   //  Darstellung
@@ -168,6 +156,7 @@
       setText('#launch-date', ui('launchAt', { date: dateStr }));
     }
     updateCountdown();
+    $('#btn-share').hidden = !B.shareUrl(cfg);
 
     // Live-Buttons
     const cta = $('#cta-main');
@@ -196,7 +185,6 @@
     renderFaq();
     setText('#newsletter-title', t(cfg.signup.liveTitle));
     setText('#newsletter-text', t(cfg.signup.liveText));
-    $('#newsletter').hidden = !cfg.signup.enabled;
 
     $('#features').hidden = !cfg.sections.features || !cfg.features.items.length;
     $('#about').hidden = !cfg.sections.about || !t(cfg.about.text);
@@ -253,13 +241,15 @@
 
   function renderSignup() {
     const cfg = state.cfg;
-    const signed = store.get('cs-signed-up');
+    const signed = state.signedUp || (B.kind === 'static' && store.get('cs-signed-up'));
+    const possible = cfg.signup.enabled && B.signupMode(cfg) !== 'none';
+    $('#newsletter').hidden = !possible;
     $$('.signup-form').forEach((form) => {
       const input = $('input[type="email"]', form);
       input.placeholder = ui('emailPlaceholder');
       $('button[type="submit"]', form).textContent = t(cfg.signup.button);
       const msg = $(`[data-msg-for="${form.id}"]`);
-      const visible = cfg.signup.enabled && !(form.id === 'signup-hero' && state.mode === 'live');
+      const visible = possible && !(form.id === 'signup-hero' && state.mode === 'live');
       form.hidden = !visible || !!signed;
       if (msg) {
         msg.hidden = !visible;
@@ -397,7 +387,7 @@
         let url = String(entry.url || '').trim();
         if (entry.type === 'email' && url && !/^mailto:/i.test(url) && url.includes('@')) url = 'mailto:' + url;
         url = U.safeUrl(url);
-        if (!url && !isPreview) continue;
+        if (!url && !state.studio) continue;
         const a = el('a');
         a.href = url || '#';
         a.setAttribute('aria-label', icon.label + (url ? '' : ' – ' + ui('linkMissing')));
@@ -416,7 +406,7 @@
     social.hidden = !count;
     setText('#footer-text', t(cfg.footer.text));
     setText('#year', new Date().getFullYear());
-    $('#admin-link').hidden = !cfg.footer.showAdminLink;
+    $('#admin-link').hidden = B.kind === 'artifact' || !cfg.footer.showAdminLink;
     renderEggCount();
     loadAnalytics();
   }
@@ -634,6 +624,12 @@
     if (state.logoClicks.length >= 5) { state.logoClicks = []; EGG.roll(); }
   });
 
+  $('#admin-link').addEventListener('click', (e) => {
+    if (!CS.studio) return;
+    e.preventDefault();
+    CS.studio.open();
+  });
+
   $('#rocket').addEventListener('click', () => { if (eggsOn()) EGG.rocket(); else CS.space.launchRocket(); });
 
   // ---------------------------------------------------------
@@ -657,21 +653,12 @@
     button.disabled = true;
     show(ui('sending'));
     try {
-      const endpoint = U.safeUrl(cfg.signup.endpoint);
-      if (honeypot && honeypot.value) {
-        // Spam-Bot – so tun, als hätte es geklappt
-      } else if (endpoint && /^https:/i.test(endpoint) && !isPreview) {
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ email, language: state.lang, source: state.mode === 'live' ? 'live' : 'coming-soon', page: location.href.split('?')[0] }),
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-      } else {
-        console.warn('[Coming Soon] Kein Anmelde-Endpunkt eingestellt – die E-Mail-Adresse wurde NICHT gespeichert. Im Admin-Panel unter „Anmeldung“ einrichten.');
+      if (!(honeypot && honeypot.value)) {
+        await B.signup(cfg, { email, lang: state.lang, source: state.mode === 'live' ? 'live' : 'coming-soon' });
       }
       input.value = '';
-      if (!isPreview) store.set('cs-signed-up', '1');
+      state.signedUp = true;
+      if (B.kind === 'static') store.set('cs-signed-up', '1');
       show(t(cfg.signup.success), 'ok');
       const r = button.getBoundingClientRect();
       fx.confetti({ x: r.left + r.width / 2, y: r.top, count: 120 });
@@ -679,8 +666,7 @@
       setWarp(true);
       setTimeout(() => setWarp(false), 1200);
       setTimeout(() => {
-        $$('.signup-form').forEach((f) => { if (!isPreview) f.hidden = true; });
-        if (!isPreview) renderSignup();
+        renderSignup();
         button.disabled = false;
       }, 2500);
     } catch (err) {
@@ -700,7 +686,24 @@
     if (!Number.isFinite(state.launch)) return;
     const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
     const name = state.cfg.brand.name || 'Launch';
-    const url = location.href.split(/[?#]/)[0];
+    const url = B.shareUrl(state.cfg);
+    if (B.kind === 'artifact') {
+      // Dateien wie .ics lassen sich hier nicht speichern – Google Kalender geht immer
+      const q = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: name + ' – Launch 🚀',
+        dates: fmt(new Date(state.launch)) + '/' + fmt(new Date(state.launch + 3600000)),
+        details: t(state.cfg.soon.text) + (url ? '\n' + url : ''),
+      });
+      const a = el('a');
+      a.href = 'https://calendar.google.com/calendar/render?' + q.toString();
+      a.target = '_blank';
+      a.rel = 'noopener';
+      body.append(a);
+      a.click();
+      a.remove();
+      return;
+    }
     const ics = [
       'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Coming Soon//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
       'BEGIN:VEVENT',
@@ -723,13 +726,13 @@
   });
 
   $('#btn-share').addEventListener('click', async () => {
-    const url = location.href.split(/[?#]/)[0];
-    const title = document.title;
-    try {
-      if (navigator.share) { await navigator.share({ title, text: t(state.cfg.soon.text), url }); return; }
-      await navigator.clipboard.writeText(url);
-      fx.toast(ui('linkCopied'));
-    } catch (e) { /* abgebrochen */ }
+    const url = B.shareUrl(state.cfg);
+    if (!url) return;
+    if (B.kind === 'static' && navigator.share) {
+      try { await navigator.share({ title: document.title, text: t(state.cfg.soon.text), url }); return; } catch (e) { /* weiter zum Kopieren */ }
+    }
+    if (await B.copy(url)) fx.toast(ui('linkCopied'));
+    else fx.toast(url, 6000);
   });
 
   // ---------------------------------------------------------
@@ -742,7 +745,8 @@
     const visitors = $('#visitors');
     if (!valid) { visitors.hidden = true; return; }
 
-    if (!isPreview && !state.analyticsLoaded) {
+    if (B.kind === 'artifact') { visitors.hidden = true; return; }
+    if (!state.studio && !state.analyticsLoaded) {
       state.analyticsLoaded = true;
       const s = el('script');
       s.async = true;
@@ -752,7 +756,7 @@
     }
 
     if (!a.showCounter) { visitors.hidden = true; return; }
-    if (isPreview) {
+    if (state.studio) {
       visitors.hidden = false;
       visitors.textContent = '👀 ' + ui('visitors', { n: '1.234' });
       return;
@@ -853,7 +857,7 @@
   function setLang(lang) {
     if (lang !== 'de' && lang !== 'en') return;
     state.lang = lang;
-    if (!isPreview) store.set('cs-lang', lang);
+    store.set('cs-lang', lang);
     render();
   }
   $$('.lang-switch button').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
@@ -878,27 +882,34 @@
   })();
 
   // ---------------------------------------------------------
-  //  Live-Vorschau für das Admin-Panel
+  //  Schnittstelle für das Studio (Bearbeiten direkt auf der Seite)
   // ---------------------------------------------------------
-  window.addEventListener('message', (e) => {
-    if (e.origin !== location.origin) return;
-    const d = e.data || {};
-    if (d.type === 'cs:config' && d.config) {
-      state.cfg = U.merge(CS.DEFAULT_CONFIG, d.config);
+  CS.site = {
+    getConfig: () => state.cfg,
+    applyConfig(cfg) {
+      state.cfg = U.merge(CS.DEFAULT_CONFIG, cfg);
       applyConfig();
-    } else if (d.type === 'cs:force-mode') {
-      state.forcedMode = d.mode === 'soon' || d.mode === 'live' ? d.mode : null;
+    },
+    setForcedMode(mode) {
+      state.forcedMode = mode === 'soon' || mode === 'live' ? mode : null;
       state.mode = computeMode();
       render();
-    } else if (d.type === 'cs:launch-test') {
+    },
+    getMode: () => state.mode,
+    setLang,
+    getLang: () => state.lang,
+    launchTest() {
       state.forcedMode = 'live';
       state.mode = 'soon';
       render();
       launchShow();
-    } else if (d.type === 'cs:lang') {
-      setLang(d.lang);
-    }
-  });
+    },
+    setStudio(open) {
+      state.studio = !!open;
+      body.classList.toggle('studio-open', state.studio);
+      render();
+    },
+  };
 
   function applyConfig() {
     state.launch = U.launchTime(state.cfg);
@@ -917,9 +928,17 @@
     applyConfig();
     setInterval(tick, 1000);
     window.addEventListener('resize', updateHeaderOffset);
-    if (!isPreview) {
-      console.log('%c🚀 Hey du!', 'font-size:20px;font-weight:bold;color:#7c5cff');
-      console.log('%cSchön, dass du reinschaust. Hier sind ein paar Easter Eggs versteckt … Tipp: ↑ ↑ ↓ ↓ ← → ← → B A', 'color:#00d4ff');
+    console.log('%c🚀 Hey du!', 'font-size:20px;font-weight:bold;color:#7c5cff');
+    console.log('%cSchön, dass du reinschaust. Hier sind ein paar Easter Eggs versteckt … Tipp: ↑ ↑ ↓ ↓ ← → ← → B A', 'color:#00d4ff');
+
+    // Artifact: Rechte & Datenbank kommen etwas später an
+    await B.init();
+    if (B.kind === 'artifact') {
+      if (await B.mySignup()) state.signedUp = true;
+      renderSignup();
+      if (B.canEdit && CS.studio) CS.studio.enable();
+    } else if (CS.studio) {
+      CS.studio.enable();
     }
   }
 

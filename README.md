@@ -1,129 +1,105 @@
-# 🚀 Coming Soon – mit Admin-Panel
+# 🚀 Coming Soon – mit Studio
 
-Eine animierte Coming-Soon-Seite im Weltraum-Look, die sich zum Starttermin automatisch in eine fertige **Live-Seite** verwandelt. Alles lässt sich über ein **Admin-Panel** einstellen, ohne Code anzufassen.
+Eine animierte Coming-Soon-Seite im Weltraum-Look, die sich zum Starttermin automatisch in eine fertige **Live-Seite** verwandelt. Bearbeitet wird alles im **Studio**, einer Seitenleiste direkt auf der Seite. Jede Änderung siehst du sofort live dahinter.
 
-Läuft kostenlos auf **GitHub Pages**. Kein Server, keine Datenbank und kein Build-Schritt nötig.
+**Live:** https://claude.ai/artifact/2DAwXXHeNd6jWewEZJ3RM7
 
 ---
 
-## ✨ Was alles drin ist
+## Zwei Arten, die Seite zu betreiben
 
-**Coming-Soon-Seite**
-- Sternenfeld mit **Warp-Speed** (Maus, Finger oder Leertaste gedrückt halten)
-- Planeten, Farbnebel und eine **Rakete**, die um die Seite fliegt
-- Sterne folgen der Maus und der **Handy-Neigung**
-- **Countdown** als Flip-Uhr oder Glas-Kacheln
-- E-Mail-Anmeldung mit Konfetti
-- „In den Kalender“ (.ics) und „Teilen“
-- **Geheime Feature-Karten** 🔒, die erst zum Start enthüllt werden
-- Roadmap, FAQ und Glitch-Effekt im Titel
+| | **Als Artifact auf claude.ai** (empfohlen) | **Auf GitHub Pages** |
+|---|---|---|
+| Einrichtung | keine, der Link funktioniert sofort | *Settings → Pages* aktivieren |
+| Studio öffnen | Knopf „✏️ Seite bearbeiten“ (nur für dich sichtbar) | `…/#admin`, Login `admin` / `12345` |
+| Speichern | **ein Klick**, ohne Token und ohne Passwort | GitHub-Token nötig |
+| Anmeldungen | eingebaute Datenbank mit Liste und CSV-Export | über Formspree o. Ä. |
+| Weltweite Bestenliste | ✅ | – (nur lokal) |
+| KI-Textassistent | ✅ | – |
+| Eigene Adresse, Google-Suche | – | ✅ |
 
-**Launch-Show** 🎉
-Wenn der Countdown abläuft, gibt es Warp-Speed, „LIFTOFF!“ und Konfetti-Kanonen. Danach wird die Seite live, ohne dass man neu laden muss.
+Die Seite erkennt selbst, wo sie läuft, und schaltet die passenden Funktionen ein.
 
-**Live-Seite**
-Hero mit Buttons, Features, Über uns, animierte Zahlen, Roadmap, Spiel, FAQ, Newsletter und Navigation.
+---
 
-**Überall dabei**
-- Mini-Spiel **„Asteroid Run“** mit Power-ups, Leben und Bestenliste
-- **7 Easter Eggs** mit Zähler
-- **Deutsch / Englisch** zum Umschalten
-- **Weltraum-Sound**, komplett im Browser erzeugt (standardmäßig aus)
-- Social-Media-Icons für 21 Plattformen
-- Ankündigungs-Banner
-- Link-Vorschau für WhatsApp, Discord, X & Co.
-- App-Icons, „Zum Startbildschirm hinzufügen“, SEO, `robots.txt` und `sitemap.xml`
-- 404-Seite „Lost in Space“
-- Besucherzähler ohne Cookies (GoatCounter)
+## ✏️ Das Studio
+
+- **Übersicht:** Countdown, Anzahl der Anmeldungen und Spieler, Einrichtungs-Checkliste
+- **Vorlagen & KI:** 6 Vorlagen (App, Spiel, Shop, Event, Creator, Weltraum) oder Texte auf Deutsch und Englisch von Claude schreiben lassen
+- **Zeitplan:** Modus (automatisch, Coming Soon, Live), Startdatum, Launch-Show testen
+- **Texte & Marke:** Name, Logo (Emoji oder Bild), alle Texte, Banner
+- **Design:** 7 Farbthemen oder eigene Farben, Sterne, Planeten, Rakete, Sound
+- **Bereiche, Roadmap & FAQ:** Listen bearbeiten, sortieren und löschen
+- **Anmeldungen:** Liste live, Adressen kopieren, CSV speichern
+- **Social Media, Spiel & Easter Eggs, Teilen & SEO, Zugang, Veröffentlichen**
+
+Extras: **Rückgängig/Wiederholen** (`Strg+Z`, `Strg+Umschalt+Z`) und **Veröffentlichen** mit `Strg+S`. Ein Entwurf bleibt gespeichert, bis du veröffentlichst. Beim Ansehen umschalten kannst du zwischen **Echt / Soon / Live** und **DE / EN**.
+
+### So funktioniert das Speichern ohne Token (Artifact)
+
+Die veröffentlichte Seite trägt ihren eigenen Bauplan in sich. Klickst du auf „Veröffentlichen“, setzt das Studio deine Einstellungen ein und veröffentlicht die Seite über claude.ai neu. Alle Besucher sehen dann sofort die neue Version. Das dürfen nur du und Personen, denen du in claude.ai Bearbeiten-Rechte gibst.
+
+### Für alle sichtbar machen
+
+Ein neues Artifact ist zuerst **privat**. Um das zu ändern, klickst du in claude.ai oben auf **Teilen** und stellst den Zugriff auf **„Jeder mit dem Link“**.
+
+### Gut zu wissen (Artifact)
+
+- **Anmelden** können sich alle, die die Seite mit ihrem Claude-Konto mitbenutzen dürfen (z. B. dein Team). Wer die Seite nur ansieht, bekommt statt des Formulars den Kalender- und den Teilen-Knopf.
+- Die E-Mail-Adressen sieht **nur der Besitzer**.
+- Fremde Dienste wie Formspree oder GoatCounter blockiert claude.ai. Dafür gibt es die eingebaute Datenbank.
+
+---
+
+## 🛠 Artifact neu bauen
+
+Nach Änderungen am Code baust du die Datei für das Artifact so neu:
+
+```bash
+node tools/build-artifact.js --url https://claude.ai/artifact/2DAwXXHeNd6jWewEZJ3RM7
+```
+
+Das ergibt `dist/coming-soon.html`: eine einzige Datei mit allen Styles, Skripten und dem eingebauten Bauplan. Die Datei wird als Artifact veröffentlicht. Dabei braucht es die Fähigkeiten `artifact`, `user`, `db` (mit Regeln für `signups` und `scores`), `downloads` und `sample`.
+
+---
+
+## 🌐 GitHub Pages
+
+1. Im Repo unter **Settings → Pages** bei *Deploy from a branch* den Branch und `/ (root)` wählen.
+2. Die Seite öffnen und `#admin` an die Adresse hängen. Anmelden mit `admin` / `12345` und **sofort das Passwort ändern** (Studio → Zugang).
+3. Zum Veröffentlichen einen [Fine-grained Token](https://github.com/settings/personal-access-tokens/new) mit *Contents: Read and write* für dieses Repo im Studio eintragen. Der Token bleibt nur in deinem Browser.
+4. Anmeldungen per [Formspree](https://formspree.io), Besucherzähler per [GoatCounter](https://www.goatcounter.com) (beides im Studio).
+
+Auf einer statischen Seite ist der Login nur ein Türschild. Ändern kann die Seite trotzdem nur, wer den GitHub-Token hat.
+
+---
+
+## ✨ Was die Seite kann
+
+- Sternenfeld mit **Warp-Speed** (Maus, Finger oder Leertaste halten), Planeten, Farbnebel und eine Rakete, die um die Seite fliegt
+- **Countdown** als Flip-Uhr oder Glas-Kacheln, „In den Kalender“, „Teilen“
+- Geheime Feature-Karten 🔒, die erst zum Start enthüllt werden
+- **Launch-Show** beim Ablauf des Countdowns: Warp, „LIFTOFF!“, Konfetti, danach die Live-Seite
+- **Live-Seite** mit Navigation, Features, Über uns, animierten Zahlen, Roadmap, FAQ und Newsletter
+- Mini-Spiel **„Asteroid Run“** mit Power-ups und Bestenliste
+- **7 Easter Eggs**, Deutsch/Englisch, Weltraum-Sound, Social-Icons für 21 Plattformen
+- Link-Vorschau, App-Icons, `robots.txt`, `sitemap.xml`, 404-Seite „Lost in Space“
 - Funktioniert auf dem Handy und respektiert „Bewegung reduzieren“
 
----
-
-## 1️⃣ Online stellen (GitHub Pages)
-
-1. Im Repo auf **Settings → Pages** gehen.
-2. Bei *Source* **„Deploy from a branch“** wählen.
-3. Den Branch mit dieser Seite wählen (z. B. `main`), Ordner **`/ (root)`**, dann **Save**.
-4. Nach 1–2 Minuten ist die Seite online unter
-   **`https://nilstset5-oss.github.io/Comming-Soon/`**
-
----
-
-## 2️⃣ Admin-Panel
-
-Erreichbar unter **`…/admin.html`**, unten im Footer gibt es auch einen 🔒-Link.
-
-| Benutzer | Passwort |
-|---|---|
-| `admin` | `12345` |
-
-> ⚠️ **Ändere das Passwort sofort** unter *Sicherheit*. `12345` steht öffentlich in dieser README.
-
-Im Panel stellst du alles mit **Live-Vorschau** ein: Startdatum, Modus, Texte (DE/EN), Logo, Farben, Effekte, Bereiche, Roadmap, FAQ, Social Links, Easter Eggs, SEO und mehr.
-
-### Veröffentlichen: GitHub-Token einrichten (einmalig)
-
-Damit der Button „Veröffentlichen“ deine Änderungen direkt ins Repo speichern kann:
-
-1. [Fine-grained Token erstellen](https://github.com/settings/personal-access-tokens/new)
-2. *Repository access*: **Only select repositories**, dann dieses Repo auswählen.
-3. *Permissions → Contents*: **Read and write**
-4. Token kopieren und im Admin-Panel unter **Veröffentlichen** einfügen.
-
-Der Token wird **nur in deinem Browser** gespeichert, nie im Repo. Beim Veröffentlichen entsteht genau **ein Commit**, der `config.json`, die Link-Vorschau, das Vorschaubild und die App-Icons aktualisiert.
-
-**Tastenkürzel:** `Strg/⌘ + S` veröffentlicht.
-
----
-
-## 3️⃣ E-Mail-Anmeldungen speichern
-
-Ohne Einrichtung läuft das Formular im **Demo-Modus**: Besucher sehen „Danke!“, aber die Adressen werden nicht gespeichert.
-
-So richtest du es ein:
-1. Kostenloses Konto bei [Formspree](https://formspree.io) anlegen, dann **New Form**.
-2. Die Adresse `https://formspree.io/f/…` kopieren.
-3. Im Admin-Panel unter **Anmeldung** einfügen und veröffentlichen.
-
-Es funktioniert auch jeder andere Dienst, der JSON per POST annimmt (Feld `email`).
-
----
-
-## 4️⃣ Besucherzähler (optional)
-
-1. Bei [GoatCounter](https://www.goatcounter.com/signup) registrieren (kostenlos, ohne Cookies).
-2. Den Code im Admin-Panel unter **SEO & Statistik** eintragen.
-3. Für die Anzeige im Footer in GoatCounter „Allow adding visitor counts“ aktivieren.
-
----
-
-## 🥚 Easter Eggs (Spoiler!)
-
 <details>
-<summary>Aufklappen</summary>
+<summary>🥚 Easter Eggs (Spoiler)</summary>
 
 | Was | Wie |
 |---|---|
 | 🌈 Regenbogen-Sterne | `↑ ↑ ↓ ↓ ← → ← → B A` |
-| 🎉 Party-Modus | `party` tippen |
+| 🎉 Party | `party` tippen |
 | 🛸 UFO | `ufo` tippen |
 | 🌌 Hyperraum | `warp` tippen |
 | 🔄 Fassrolle | 5× schnell aufs Logo klicken |
-| 🚀 Probestart | Auf die fliegende Rakete klicken |
-| 🤫 Geheimes Wort | Im Admin-Panel festlegen (Standard: `nova`) |
+| 🚀 Probestart | Auf die Rakete klicken |
+| 🤫 Geheimes Wort | im Studio festlegen (Standard: `nova`) |
 
 </details>
-
----
-
-## 🧪 Lokal testen
-
-```bash
-python3 -m http.server 8000
-# dann http://localhost:8000 öffnen (Admin: http://localhost:8000/admin.html)
-```
-
-Du kannst `index.html` auch direkt per Doppelklick öffnen. Dann werden die Standard-Einstellungen benutzt, weil der Browser `config.json` ohne Server nicht laden darf.
 
 ---
 
@@ -131,28 +107,31 @@ Du kannst `index.html` auch direkt per Doppelklick öffnen. Dann werden die Stan
 
 ```
 index.html              Die Seite (Coming Soon + Live)
-admin.html              Admin-Panel
-config.json             Alle Einstellungen (schreibt das Admin-Panel)
-404.html                „Lost in Space“-Fehlerseite
-manifest.webmanifest    App-Daten fürs Handy
-assets/css/             site.css, admin.css
-assets/js/config.js     Standard-Einstellungen, Texte, Hilfsfunktionen
+config.json             Einstellungen für GitHub Pages
+admin.html              Leitet zum Studio weiter (#admin)
+404.html                „Lost in Space“
+assets/css/site.css     Seitendesign
+assets/css/studio.css   Studio
+assets/js/config.js     Standard-Einstellungen, Texte, Vorlagen, Hilfsfunktionen
+assets/js/backend.js    Speichern, Anmeldungen, Bestenliste (Artifact oder statisch)
+assets/js/studio.js     Studio
 assets/js/site.js       Hauptlogik der Seite
 assets/js/space.js      Sterne, Planeten, Rakete, Handy-Neigung
 assets/js/fx.js         Konfetti, Flip-Uhr, Zähler, Meldungen
 assets/js/sound.js      Sound (Web Audio, ohne Dateien)
-assets/js/game.js       Mini-Spiel „Asteroid Run“
-assets/js/images.js     Erzeugt Vorschaubild & App-Icons
-assets/js/admin.js      Admin-Panel
+assets/js/game.js       Mini-Spiel
+assets/js/images.js     Vorschaubild & App-Icons (GitHub Pages)
 assets/js/icons.js      Social-Media-Icons
-assets/img/             Vorschaubild & Icons
+tools/build-artifact.js Baut die Artifact-Datei
 ```
 
----
+## 🧪 Lokal testen
 
-## 🔒 Gut zu wissen
-
-Das ist eine **statische Seite**. Der Admin-Login ist deshalb wie ein Türschild: Er hält Neugierige fern, ist aber kein Tresor. Das ist in Ordnung, denn **ändern** kann die Seite nur, wer deinen GitHub-Token hat. Gib ihn niemals weiter und setze beim Erstellen ein Ablaufdatum.
+```bash
+python3 -m http.server 8000
+# http://localhost:8000          → Seite
+# http://localhost:8000/#admin   → Studio (admin / 12345)
+```
 
 ---
 

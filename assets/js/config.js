@@ -233,6 +233,7 @@
       eggFound: '🥚 Easter Egg {n}/{total}: {name}',
       liftoff: 'LIFTOFF!',
       admin: 'Admin',
+      studio: 'Seite bearbeiten',
       closeBanner: 'Banner schließen',
       menu: 'Menü',
       status_done: 'Erledigt', status_active: 'In Arbeit', status_planned: 'Geplant',
@@ -249,7 +250,8 @@
       g_over: 'Game Over',
       g_newBest: '🏆 Neuer Rekord!',
       g_name: 'Dein Name',
-      g_top: 'Bestenliste',
+      g_top: 'Deine Rekorde',
+      g_world: '🌍 Bestenliste',
       g_share: 'Ergebnis teilen',
       g_shareText: 'Ich habe {n} Punkte bei {game} geschafft! Schaffst du mehr? 🚀',
       g_items: '⭐ = Punkte · 🛡 = Schild · ⚡ = Dreifach-Schuss',
@@ -288,6 +290,7 @@
       eggFound: '🥚 Easter egg {n}/{total}: {name}',
       liftoff: 'LIFTOFF!',
       admin: 'Admin',
+      studio: 'Edit page',
       closeBanner: 'Close banner',
       menu: 'Menu',
       status_done: 'Done', status_active: 'In progress', status_planned: 'Planned',
@@ -303,7 +306,8 @@
       g_over: 'Game Over',
       g_newBest: '🏆 New record!',
       g_name: 'Your name',
-      g_top: 'Leaderboard',
+      g_top: 'Your records',
+      g_world: '🌍 Leaderboard',
       g_share: 'Share result',
       g_shareText: 'I scored {n} points in {game}! Can you beat it? 🚀',
       g_items: '⭐ = points · 🛡 = shield · ⚡ = triple shot',
@@ -487,6 +491,175 @@
 
   U.replaceSeoBlock = (html, cfg) =>
     html.replace(/<!-- SEO:START[\s\S]*?<!-- SEO:END -->/, U.seoBlock(cfg).trim());
+
+  // ---------------------------------------------------------
+  //  Seite als Vorlage: Die veröffentlichte Artifact-Seite trägt sich
+  //  selbst als Text in sich und kann sich so mit neuen Einstellungen
+  //  neu erzeugen (ohne Server, ohne Token).
+  // ---------------------------------------------------------
+  U.templateToken = (name) => '<!--' + 'CS:' + name + '-->';
+
+  const jsonForHtml = (value) => JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+
+  U.fillTemplate = (template, cfg) => {
+    const tok = U.templateToken;
+    const title = U.escapeHtml(cfg.brand && cfg.brand.name ? cfg.brand.name : 'Coming Soon');
+    return template
+      .split(tok('TITLE')).join(title)
+      .split(tok('CONFIG')).join(jsonForHtml(cfg))
+      .split(tok('SELF')).join(jsonForHtml(template));
+  };
+
+  // Gerüst, in das claude.ai jede Artifact-Seite verpackt
+  CS.SKELETON_START = "<!doctype html><html><head><meta charset=utf8><meta name=viewport content=\"width=device-width,initial-scale=1,viewport-fit=cover\"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>\n";
+  CS.SKELETON_END = "\n</body></html>";
+
+  U.buildDocument = (template, cfg) => CS.SKELETON_START + U.fillTemplate(template, cfg) + CS.SKELETON_END;
+
+  // ---------------------------------------------------------
+  //  Vorlagen für typische Projekte (im Studio unter „Vorlagen“)
+  // ---------------------------------------------------------
+  const F = (icon, tde, ten, xde, xen) => ({ icon, title: L(tde, ten), text: L(xde, xen) });
+
+  CS.PRESETS = {
+    space: {
+      label: 'Weltraum (Standard)', icon: '🚀', theme: 'galaxy',
+      patch: {
+        brand: { logoEmoji: '🚀' },
+        soon: { badge: CS.DEFAULT_CONFIG.soon.badge, text: CS.DEFAULT_CONFIG.soon.text },
+        live: { headline: CS.DEFAULT_CONFIG.live.headline, text: CS.DEFAULT_CONFIG.live.text, ctaText: CS.DEFAULT_CONFIG.live.ctaText },
+        features: { items: CS.DEFAULT_CONFIG.features.items },
+      },
+    },
+    app: {
+      label: 'App / Software', icon: '📱', theme: 'ocean',
+      patch: {
+        brand: { logoEmoji: '📱' },
+        soon: {
+          badge: L('Beta startet bald', 'Beta coming soon'),
+          text: L('Unsere neue App macht deinen Alltag einfacher. Trag dich ein und gehör zu den Ersten, die sie ausprobieren dürfen.',
+                  'Our new app makes everyday life easier. Sign up and be among the first to try it.'),
+        },
+        live: {
+          headline: L('{name} ist da.', '{name} is here.'),
+          text: L('Lade die App herunter und leg sofort los – kostenlos, schnell und ohne Schnickschnack.',
+                  'Download the app and get started right away – free, fast and no fuss.'),
+          ctaText: L('App holen', 'Get the app'),
+        },
+        features: { items: [
+          F('⚡', 'Startet sofort', 'Starts instantly', 'Öffnen, loslegen. Keine Wartezeit, keine lange Einrichtung.', 'Open it and go. No waiting, no long setup.'),
+          F('🔔', 'Smarte Erinnerungen', 'Smart reminders', 'Die App erinnert dich genau dann, wenn es passt.', 'The app reminds you exactly when it matters.'),
+          F('☁️', 'Überall synchron', 'Synced everywhere', 'Handy, Tablet, Computer – deine Daten sind überall gleich.', 'Phone, tablet, computer – your data is the same everywhere.'),
+          F('🔒', 'Privat', 'Private', 'Keine Werbung, kein Datenverkauf. Versprochen.', 'No ads, no selling your data. Promise.'),
+          F('🌙', 'Dark Mode', 'Dark mode', 'Schont die Augen – tagsüber wie nachts.', 'Easy on the eyes – day and night.'),
+          F('🎁', 'Frühstarter-Bonus', 'Early bird bonus', 'Wer sich jetzt einträgt, bekommt zum Start ein Extra.', 'Sign up now and get a little extra at launch.'),
+        ] },
+      },
+    },
+    game: {
+      label: 'Spiel', icon: '🎮', theme: 'matrix',
+      patch: {
+        brand: { logoEmoji: '🎮' },
+        soon: {
+          badge: L('Early Access bald', 'Early access soon'),
+          text: L('Ein neues Spiel ist in Entwicklung. Trag dich ein, sichere dir einen Platz in der Beta und erfahre als Erstes, wann es losgeht.',
+                  'A new game is in development. Sign up to grab a spot in the beta and be the first to know when it launches.'),
+        },
+        live: {
+          headline: L('{name} – jetzt spielen!', '{name} – play now!'),
+          text: L('Das Warten hat ein Ende. Schnapp dir deinen Controller und zeig, was du draufhast.',
+                  'The wait is over. Grab your controller and show what you’ve got.'),
+          ctaText: L('Jetzt spielen', 'Play now'),
+        },
+        features: { items: [
+          F('🗺️', 'Riesige Welt', 'Huge world', 'Entdecke Orte, die noch niemand gesehen hat.', 'Explore places nobody has seen before.'),
+          F('⚔️', 'Epische Kämpfe', 'Epic battles', 'Schnell, taktisch und immer anders.', 'Fast, tactical and never the same twice.'),
+          F('👥', 'Mit Freunden', 'With friends', 'Koop und Multiplayer – zusammen macht es doppelt Spaß.', 'Co-op and multiplayer – twice the fun together.'),
+          F('🏆', 'Ranglisten', 'Leaderboards', 'Miss dich mit Spielern aus der ganzen Welt.', 'Compete with players from around the world.'),
+          F('🎨', 'Eigener Look', 'Your own style', 'Skins, Farben und Details – mach deinen Charakter einzigartig.', 'Skins, colors and details – make your character unique.'),
+          F('🔄', 'Ständig neu', 'Always fresh', 'Regelmäßige Updates mit neuen Inhalten.', 'Regular updates with new content.'),
+        ] },
+      },
+    },
+    shop: {
+      label: 'Shop / Marke', icon: '🛍️', theme: 'sunset',
+      patch: {
+        brand: { logoEmoji: '🛍️' },
+        soon: {
+          badge: L('Shop-Eröffnung', 'Store opening'),
+          text: L('Unser Shop öffnet bald seine Türen. Trag dich ein und sichere dir einen Rabatt zur Eröffnung.',
+                  'Our store opens its doors soon. Sign up and get a discount on opening day.'),
+        },
+        live: {
+          headline: L('{name} hat geöffnet!', '{name} is open!'),
+          text: L('Entdecke unsere Kollektion – mit Liebe ausgesucht, fair produziert und schnell bei dir.',
+                  'Discover our collection – carefully chosen, fairly made and delivered fast.'),
+          ctaText: L('Zum Shop', 'Visit the store'),
+        },
+        features: { items: [
+          F('✨', 'Handverlesen', 'Hand-picked', 'Jedes Produkt haben wir selbst ausgesucht und getestet.', 'We picked and tested every product ourselves.'),
+          F('🚚', 'Schneller Versand', 'Fast shipping', 'Bestellt heute, in wenigen Tagen bei dir.', 'Order today, at your door in a few days.'),
+          F('🌱', 'Nachhaltig', 'Sustainable', 'Faire Herstellung und möglichst wenig Verpackung.', 'Fair production and as little packaging as possible.'),
+          F('↩️', 'Einfache Rückgabe', 'Easy returns', '30 Tage Zeit – ohne Wenn und Aber.', '30 days to return – no questions asked.'),
+          F('💳', 'Sicher bezahlen', 'Secure payment', 'Alle gängigen Zahlarten, sicher verschlüsselt.', 'All common payment methods, securely encrypted.'),
+          F('🎁', 'Eröffnungsrabatt', 'Opening discount', 'Wer sich einträgt, spart zum Start.', 'Sign up and save at launch.'),
+        ] },
+      },
+    },
+    event: {
+      label: 'Event / Party', icon: '🎉', theme: 'candy',
+      patch: {
+        brand: { logoEmoji: '🎉' },
+        soon: {
+          badge: L('Save the Date', 'Save the date'),
+          text: L('Es wird groß, laut und unvergesslich. Trag dich ein und verpass keine Ankündigung.',
+                  'It’s going to be big, loud and unforgettable. Sign up and don’t miss a single announcement.'),
+        },
+        live: {
+          headline: L('{name} – es geht los!', '{name} – here we go!'),
+          text: L('Tickets, Programm und alle Infos – hier findest du alles für den großen Tag.',
+                  'Tickets, schedule and all the details – everything for the big day is right here.'),
+          ctaText: L('Tickets sichern', 'Get tickets'),
+        },
+        features: { items: [
+          F('🎵', 'Live-Musik', 'Live music', 'Acts, die du nicht verpassen willst.', 'Acts you don’t want to miss.'),
+          F('🍕', 'Essen & Drinks', 'Food & drinks', 'Für jeden Geschmack ist etwas dabei.', 'Something for every taste.'),
+          F('📸', 'Fotobox', 'Photo booth', 'Erinnerungen zum Mitnehmen.', 'Memories to take home.'),
+          F('🎟️', 'Begrenzte Plätze', 'Limited spots', 'Schnell sein lohnt sich.', 'It pays to be quick.'),
+          F('🌃', 'Bis spät in die Nacht', 'Until late', 'Gefeiert wird, bis die Sonne aufgeht.', 'We party until the sun comes up.'),
+          F('🤫', 'Überraschungsgast', 'Surprise guest', 'Wer es ist? Verraten wir erst am Abend.', 'Who is it? We’ll only tell you on the night.'),
+        ] },
+      },
+    },
+    creator: {
+      label: 'Creator / Kanal', icon: '🎬', theme: 'fire',
+      patch: {
+        brand: { logoEmoji: '🎬' },
+        soon: {
+          badge: L('Neuer Kanal', 'New channel'),
+          text: L('Bald geht es los: neue Videos, neue Ideen und jede Menge Spaß. Trag dich ein, damit du das erste Video nicht verpasst.',
+                  'Coming soon: new videos, new ideas and loads of fun. Sign up so you don’t miss the first video.'),
+        },
+        live: {
+          headline: L('{name} ist online!', '{name} is live!'),
+          text: L('Das erste Video ist da. Schau rein, abonnier und sei von Anfang an dabei.',
+                  'The first video is out. Watch, subscribe and be there from the start.'),
+          ctaText: L('Jetzt ansehen', 'Watch now'),
+        },
+        features: { items: [
+          F('🎥', 'Jede Woche neu', 'New every week', 'Regelmäßig frische Videos.', 'Fresh videos on a regular schedule.'),
+          F('😂', 'Zum Lachen', 'For laughs', 'Gute Laune garantiert.', 'Good vibes guaranteed.'),
+          F('💡', 'Tipps & Tricks', 'Tips & tricks', 'Dinge, die du wirklich gebrauchen kannst.', 'Things you can actually use.'),
+          F('🔴', 'Livestreams', 'Livestreams', 'Live dabei sein und mitreden.', 'Join live and have your say.'),
+          F('🤝', 'Community', 'Community', 'Ein Ort für alle, die mitmachen wollen.', 'A place for everyone who wants to join in.'),
+          F('🎁', 'Giveaways', 'Giveaways', 'Zum Start gibt es etwas zu gewinnen.', 'There’s something to win at launch.'),
+        ] },
+      },
+    },
+  };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = CS;
 })(typeof window !== 'undefined' ? window : globalThis);

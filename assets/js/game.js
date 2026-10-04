@@ -448,7 +448,7 @@
     ol.className = 'leaderboard';
     list.forEach((e, i) => {
       const li = document.createElement('li');
-      if (e === highlight) li.className = 'me';
+      if (e === highlight || e.me) li.className = 'me';
       const rank = document.createElement('span'); rank.className = 'rank'; rank.textContent = i + 1 + '.';
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = e.name;
       const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = e.score.toLocaleString();
@@ -524,11 +524,28 @@
     name.addEventListener('input', updateName);
     updateName();
 
+    // Weltweite Bestenliste (nur wenn die Seite eine Datenbank hat)
+    const world = el('div');
+    world.style.width = '100%';
+    world.hidden = true;
+    const B = CS.backend;
+    const refreshWorld = async () => {
+      if (!B || !B.hasWorldScores()) return;
+      await B.submitScore(name.value.trim() || 'Pilot', final);
+      const rows = await B.topScores(5);
+      if (!rows || !rows.length || state !== 'over') return;
+      world.textContent = '';
+      world.append(el('p', null, ui.g_world), leaderboard(rows));
+      world.hidden = false;
+    };
+    name.addEventListener('change', refreshWorld);
+    refreshWorld();
+
     const again = btn(ui.g_again + ' 🔁', 'btn-primary', startGame);
     const share = btn(ui.g_share, 'btn-ghost', () => shareScore(final));
     const row = el('div', 'cta-row');
     row.append(again, share);
-    nodes.push(name, board, row);
+    nodes.push(name, world, board, row);
     if (!list.length) board.hidden = true;
     showOverlay(nodes, again);
   }
