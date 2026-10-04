@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a0b16">
+  <title>Admin – Coming Soon</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>">
+  <link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+  <!-- ===================== LOGIN ===================== -->
+  <div class="login" id="login">
+    <form class="login-card" id="login-form" novalidate>
+      <div class="login-logo" aria-hidden="true">🚀</div>
+      <h1>Admin-Bereich</h1>
+      <p class="muted">Melde dich an, um deine Seite zu bearbeiten.</p>
+      <label class="field">
+        <span>Benutzername</span>
+        <input id="login-user" name="username" autocomplete="username" required>
+      </label>
+      <label class="field">
+        <span>Passwort</span>
+        <input id="login-pass" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="a-btn primary wide" type="submit" id="login-btn">Anmelden</button>
+      <p class="login-error" id="login-error" role="alert"></p>
+      <a class="muted small" href="./">← Zurück zur Seite</a>
+    </form>
+  </div>
+
+  <!-- ===================== APP ===================== -->
+  <div class="app" id="app" hidden>
+    <header class="a-top">
+      <div class="a-brand">
+        <span class="a-logo" aria-hidden="true">🛠️</span>
+        <div>
+          <b>Admin</b>
+          <span class="a-site" id="site-name"></span>
+        </div>
+      </div>
+      <div class="a-status" id="status" role="status"></div>
+      <div class="a-actions">
+        <a class="a-btn ghost" href="./" target="_blank" rel="noopener">Seite öffnen ↗</a>
+        <button class="a-btn primary" type="button" id="btn-publish">☁️ Veröffentlichen</button>
+        <button class="a-btn ghost icon" type="button" id="btn-logout" title="Abmelden" aria-label="Abmelden">⎋</button>
+      </div>
+    </header>
+
+    <div class="a-tabs" role="tablist" aria-label="Ansicht">
+      <button type="button" role="tab" data-view="edit" aria-selected="true">✏️ Bearbeiten</button>
+      <button type="button" role="tab" data-view="preview" aria-selected="false">👁 Vorschau</button>
+    </div>
+
+    <div class="a-layout" id="layout" data-view="edit">
+      <nav class="a-nav" id="nav" aria-label="Bereiche"></nav>
+      <main class="a-editor" id="editor"></main>
+      <section class="a-preview" aria-label="Live-Vorschau">
+        <div class="a-preview-bar">
+          <div class="seg" id="device-seg" role="group" aria-label="Gerät">
+            <button type="button" data-device="desktop" aria-pressed="true" title="Computer">💻</button>
+            <button type="button" data-device="mobile" aria-pressed="false" title="Handy">📱</button>
+          </div>
+          <div class="seg" id="mode-seg" role="group" aria-label="Vorschau-Modus">
+            <button type="button" data-mode="" aria-pressed="true" title="So wie eingestellt">Echt</button>
+            <button type="button" data-mode="soon" aria-pressed="false">Soon</button>
+            <button type="button" data-mode="live" aria-pressed="false">Live</button>
+          </div>
+          <div class="seg" id="lang-seg" role="group" aria-label="Sprache">
+            <button type="button" data-lang="de" aria-pressed="true">DE</button>
+            <button type="button" data-lang="en" aria-pressed="false">EN</button>
+          </div>
+          <button class="a-btn ghost small" type="button" id="btn-launch-test" title="Launch-Show testen">🚀 Launch testen</button>
+          <button class="a-btn ghost small icon" type="button" id="btn-reload" title="Vorschau neu laden" aria-label="Vorschau neu laden">↻</button>
+        </div>
+        <div class="a-frame-wrap" id="frame-wrap">
+          <iframe id="preview" title="Vorschau der Seite" src="about:blank"></iframe>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="a-toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/images.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

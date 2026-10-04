@@ -2,687 +2,225 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Coming Soon</title>
-  <meta name="description" content="Hier entsteht gerade etwas Neues. Bald geht's los.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#05060f">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
-  <style>
-    :root {
-      --bg: #05060f;
-      --fg: #e8ecff;
-      --muted: #8b93b8;
-      --accent-1: #7c5cff;
-      --accent-2: #00d4ff;
-      --accent-3: #ff4fd8;
-      --ok: #3dffa8;
-      --glass: rgba(255, 255, 255, 0.06);
-      --glass-border: rgba(255, 255, 255, 0.12);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    [hidden] { display: none !important; }
-    html, body { height: 100%; }
-
-    body {
-      background: var(--bg);
-      color: var(--fg);
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-touch-callout: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    #space {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-      z-index: 0;
-    }
-
-    .glow {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background:
-        radial-gradient(ellipse at 50% 120%, rgba(124, 92, 255, 0.28), transparent 60%),
-        radial-gradient(ellipse at 50% -20%, rgba(0, 212, 255, 0.12), transparent 50%);
-    }
-
-    main {
-      position: relative;
-      z-index: 1;
-      min-height: 100vh;
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 28px;
-      padding: 48px 16px;
-      text-align: center;
-      transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.6s, filter 0.6s;
-    }
-
-    body.warping main {
-      transform: scale(0.94);
-      opacity: 0.55;
-      filter: blur(2px);
-    }
-
-    /* ---------- Badge ---------- */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--muted);
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--ok);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%   { box-shadow: 0 0 0 0 rgba(61, 255, 168, 0.6); }
-      70%  { box-shadow: 0 0 0 10px rgba(61, 255, 168, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(61, 255, 168, 0); }
-    }
-
-    /* ---------- Titel ---------- */
-    .title {
-      position: relative;
-      font-size: clamp(3rem, 13vw, 8.5rem);
-      font-weight: 900;
-      line-height: 0.95;
-      letter-spacing: -0.045em;
-      padding: 0 0.06em 0.14em;
-      background: linear-gradient(90deg, var(--accent-2), var(--accent-1), var(--accent-3), var(--accent-2));
-      background-size: 300% 100%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      animation: shimmer 8s linear infinite;
-      filter: drop-shadow(0 0 30px rgba(124, 92, 255, 0.35));
-    }
-
-    @keyframes shimmer { to { background-position: 300% 0; } }
-
-    .title::before,
-    .title::after {
-      content: attr(data-text);
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      opacity: 0;
-      pointer-events: none;
-    }
-    .title::before { color: var(--accent-2); }
-    .title::after  { color: var(--accent-3); }
-    .title.glitch::before { opacity: 0.85; animation: glitch-a 0.4s steps(2) both; }
-    .title.glitch::after  { opacity: 0.85; animation: glitch-b 0.4s steps(2) both; }
-
-    @keyframes glitch-a {
-      0%   { clip-path: inset(10% 0 60% 0); transform: translate(-6px, -2px); }
-      25%  { clip-path: inset(55% 0 20% 0); transform: translate(5px, 1px); }
-      50%  { clip-path: inset(30% 0 45% 0); transform: translate(-4px, 2px); }
-      75%  { clip-path: inset(75% 0 5% 0);  transform: translate(6px, -1px); }
-      100% { clip-path: inset(0 0 100% 0);  transform: none; }
-    }
-    @keyframes glitch-b {
-      0%   { clip-path: inset(65% 0 10% 0); transform: translate(6px, 2px); }
-      25%  { clip-path: inset(15% 0 60% 0); transform: translate(-5px, -1px); }
-      50%  { clip-path: inset(45% 0 30% 0); transform: translate(4px, -2px); }
-      75%  { clip-path: inset(5% 0 80% 0);  transform: translate(-6px, 1px); }
-      100% { clip-path: inset(0 0 100% 0);  transform: none; }
-    }
-
-    .lead {
-      max-width: 34rem;
-      font-size: clamp(1rem, 2.4vw, 1.2rem);
-      line-height: 1.6;
-      color: var(--muted);
-    }
-
-    /* ---------- Countdown ---------- */
-    .countdown-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-      max-width: 560px;
-    }
-
-    .countdown {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      width: 100%;
-    }
-
-    .unit {
-      padding: 18px 6px 14px;
-      border-radius: 16px;
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      overflow: hidden;
-    }
-
-    .num {
-      display: block;
-      font-size: clamp(1.8rem, 7vw, 3rem);
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.1;
-    }
-    .num.tick { animation: tick 0.45s ease; }
-
-    @keyframes tick {
-      0%   { transform: translateY(-35%); opacity: 0; filter: blur(4px); }
-      100% { transform: none; opacity: 1; filter: none; }
-    }
-
-    .label {
-      display: block;
-      margin-top: 4px;
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .launch-date {
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-
-    .live {
-      font-size: clamp(1.5rem, 5vw, 2.2rem);
-      font-weight: 800;
-    }
-
-    /* ---------- Anmeldung ---------- */
-    .notify {
-      display: flex;
-      gap: 8px;
-      width: 100%;
-      max-width: 460px;
-      padding: 6px;
-      border-radius: 999px;
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .notify:focus-within {
-      border-color: rgba(124, 92, 255, 0.6);
-      box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.15), 0 0 40px rgba(124, 92, 255, 0.25);
-    }
-
-    .notify input {
-      flex: 1;
-      min-width: 0;
-      padding: 10px 16px;
-      border: 0;
-      outline: 0;
-      background: transparent;
-      color: var(--fg);
-      font: inherit;
-      -webkit-user-select: text;
-      user-select: text;
-    }
-    .notify input::placeholder { color: var(--muted); }
-
-    .notify button {
-      padding: 10px 20px;
-      border: 0;
-      border-radius: 999px;
-      background: linear-gradient(135deg, var(--accent-1), var(--accent-3));
-      color: #fff;
-      font: inherit;
-      font-weight: 700;
-      white-space: nowrap;
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
-    }
-    .notify button:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255, 79, 216, 0.35); }
-    .notify button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
-    .notify button:disabled { opacity: 0.6; cursor: default; transform: none; box-shadow: none; }
-
-    .form-msg {
-      min-height: 1.4em;
-      margin-top: -16px;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-    .form-msg.ok    { color: var(--ok); }
-    .form-msg.error { color: #ff7a90; }
-
-    /* ---------- Hinweis, Footer, Toast ---------- */
-    .hint {
-      font-size: 0.85rem;
-      color: var(--muted);
-      opacity: 0.8;
-    }
-
-    kbd {
-      display: inline-block;
-      padding: 1px 7px;
-      border-radius: 6px;
-      border: 1px solid var(--glass-border);
-      border-bottom-width: 2px;
-      background: var(--glass);
-      font: inherit;
-      font-size: 0.8em;
-    }
-
-    footer {
-      font-size: 0.8rem;
-      color: var(--muted);
-      opacity: 0.6;
-    }
-
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 24px;
-      z-index: 2;
-      max-width: calc(100% - 32px);
-      padding: 10px 18px;
-      border-radius: 999px;
-      background: rgba(20, 22, 40, 0.85);
-      border: 1px solid var(--glass-border);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      font-size: 0.9rem;
-      opacity: 0;
-      transform: translate(-50%, 20px);
-      transition: opacity 0.3s, transform 0.3s;
-      pointer-events: none;
-    }
-    .toast.show { opacity: 1; transform: translate(-50%, 0); }
-
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0 0 0 0);
-      white-space: nowrap;
-    }
-
-    @media (max-width: 480px) {
-      main { gap: 24px; }
-      .countdown { gap: 8px; }
-      .unit { border-radius: 12px; padding: 14px 4px 10px; }
-      .label { font-size: 0.6rem; letter-spacing: 0.1em; }
-      .notify { flex-direction: column; border-radius: 20px; }
-      .notify input { text-align: center; }
-      .notify button { padding: 12px; border-radius: 14px; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-      }
-    }
-  </style>
+  <!-- SEO:START (wird vom Admin-Panel beim Veröffentlichen aktualisiert) -->
+  <title>NOVA – Coming Soon</title>
+  <meta name="description" content="Hier entsteht gerade etwas Großes. Trag dich ein und sei beim Start als Erstes dabei.">
+  <link rel="canonical" href="https://nilstset5-oss.github.io/Comming-Soon/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="NOVA">
+  <meta property="og:title" content="NOVA – Coming Soon">
+  <meta property="og:description" content="Hier entsteht gerade etwas Großes. Trag dich ein und sei beim Start als Erstes dabei.">
+  <meta property="og:url" content="https://nilstset5-oss.github.io/Comming-Soon/">
+  <meta property="og:image" content="https://nilstset5-oss.github.io/Comming-Soon/assets/img/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="NOVA – Coming Soon">
+  <meta name="twitter:description" content="Hier entsteht gerade etwas Großes. Trag dich ein und sei beim Start als Erstes dabei.">
+  <meta name="twitter:image" content="https://nilstset5-oss.github.io/Comming-Soon/assets/img/og-image.jpg">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"NOVA","url":"https://nilstset5-oss.github.io/Comming-Soon/","description":"Hier entsteht gerade etwas Großes. Trag dich ein und sei beim Start als Erstes dabei."}</script>
+  <!-- SEO:END -->
+  <link rel="icon" href="assets/img/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="assets/css/site.css">
 </head>
-<body>
+<body class="mode-soon">
+  <div class="nebula" id="nebula" aria-hidden="true"></div>
   <canvas id="space" aria-hidden="true"></canvas>
+  <div class="planets" id="planets" aria-hidden="true">
+    <div class="planet planet-1"></div>
+    <div class="planet planet-2"></div>
+    <div class="planet planet-3"></div>
+  </div>
   <div class="glow" aria-hidden="true"></div>
 
-  <main>
-    <span class="badge"><span class="dot" aria-hidden="true"></span>In Arbeit</span>
+  <button class="rocket" id="rocket" type="button" aria-label="Rakete" hidden>
+    <svg viewBox="0 0 40 64" aria-hidden="true">
+      <defs>
+        <linearGradient id="rk-body" x1="0" x2="1">
+          <stop offset="0" stop-color="#ffffff"/>
+          <stop offset="1" stop-color="#b9c0e8"/>
+        </linearGradient>
+        <linearGradient id="rk-flame" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#fff6b0"/>
+          <stop offset=".45" stop-color="#ffb347"/>
+          <stop offset="1" stop-color="#ff3b6b" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path class="flame" d="M13 46 Q20 74 27 46 Z" fill="url(#rk-flame)"/>
+      <path d="M8 36 L2 48 L12 44 Z" fill="var(--a3)"/>
+      <path d="M32 36 L38 48 L28 44 Z" fill="var(--a3)"/>
+      <path d="M20 2 C31 12 32 30 28 46 L12 46 C8 30 9 12 20 2 Z" fill="url(#rk-body)"/>
+      <circle cx="20" cy="22" r="5.5" fill="var(--a2)" stroke="#2a2f55" stroke-width="2"/>
+      <path d="M20 2 C24 6 26.5 10 27.6 14 L12.4 14 C13.5 10 16 6 20 2 Z" fill="var(--a1)"/>
+    </svg>
+  </button>
 
-    <h1 class="title" id="title" data-text="Coming Soon">Coming Soon</h1>
-
-    <p class="lead">
-      Hier entsteht gerade etwas Neues. Trag dich ein und sei beim Start als Erstes dabei.
-    </p>
-
-    <section class="countdown-wrap" aria-label="Countdown bis zum Start">
-      <div class="countdown" id="countdown">
-        <div class="unit"><span class="num" id="cd-days">00</span><span class="label">Tage</span></div>
-        <div class="unit"><span class="num" id="cd-hours">00</span><span class="label">Stunden</span></div>
-        <div class="unit"><span class="num" id="cd-minutes">00</span><span class="label">Minuten</span></div>
-        <div class="unit"><span class="num" id="cd-seconds">00</span><span class="label">Sekunden</span></div>
+  <div class="header" id="header">
+    <div class="banner" id="banner" hidden>
+      <span id="banner-text"></span>
+      <button class="banner-close" id="banner-close" type="button" aria-label="Banner schließen">×</button>
+    </div>
+    <div class="topbar">
+      <a class="brand" href="#top" id="brand">
+        <span class="brand-logo" id="brand-logo" aria-hidden="true">🚀</span>
+        <span class="brand-name" id="brand-name"></span>
+      </a>
+      <nav class="nav only-live" id="nav" aria-label="Navigation"></nav>
+      <div class="controls">
+        <button class="icon-btn menu-btn only-live" id="btn-menu" type="button" aria-expanded="false" aria-controls="nav">☰</button>
+        <button class="icon-btn" id="btn-game" type="button">🎮</button>
+        <button class="icon-btn" id="btn-sound" type="button" aria-pressed="false">🔇</button>
+        <div class="lang-switch" role="group" aria-label="Sprache / Language">
+          <button type="button" data-lang="de" aria-pressed="true">DE</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
       </div>
-      <p class="launch-date" id="launch-date"></p>
-      <p class="live" id="live" hidden>🚀 Wir sind live!</p>
+    </div>
+  </div>
+
+  <main id="top">
+    <!-- ===================== HERO ===================== -->
+    <section class="hero" id="hero">
+      <span class="badge"><span class="dot" aria-hidden="true"></span><span id="badge-text"></span></span>
+
+      <h1 class="title gradient-text" id="title"></h1>
+
+      <p class="lead" id="lead"></p>
+
+      <!-- Coming Soon: Countdown -->
+      <div class="countdown-wrap only-soon" id="countdown-wrap">
+        <div class="countdown" id="countdown" role="timer" aria-live="off"></div>
+        <div class="launch-meta">
+          <span id="launch-date"></span>
+          <button class="link-btn" id="btn-calendar" type="button">📅 <span data-ui="calendar"></span></button>
+          <button class="link-btn" id="btn-share" type="button">🔗 <span data-ui="share"></span></button>
+        </div>
+      </div>
+
+      <!-- Live: Buttons -->
+      <div class="cta-row only-live" id="cta-row">
+        <a class="btn btn-primary" id="cta-main" href="#features"></a>
+        <button class="btn btn-ghost" id="cta-game" type="button" data-ui="playNow"></button>
+      </div>
+
+      <!-- Coming Soon: Anmeldung -->
+      <form class="notify only-soon signup-form" id="signup-hero" novalidate>
+        <label class="sr-only" for="email-hero" data-ui="emailLabel"></label>
+        <input id="email-hero" name="email" type="email" autocomplete="email" required>
+        <input class="hp" type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <button class="btn btn-primary" type="submit"></button>
+      </form>
+      <p class="form-msg only-soon" role="status" aria-live="polite" data-msg-for="signup-hero"></p>
+
+      <p class="hint" id="hint"></p>
+
+      <a class="scroll-cue" href="#features" id="scroll-cue">
+        <span class="mouse" aria-hidden="true"></span>
+        <span data-ui="scroll"></span>
+      </a>
     </section>
 
-    <form class="notify" id="notify" novalidate>
-      <label class="sr-only" for="email">E-Mail-Adresse</label>
-      <input id="email" name="email" type="email" placeholder="deine@email.de" autocomplete="email" required>
-      <button type="submit" id="notify-btn">Benachrichtige mich</button>
-    </form>
-    <p class="form-msg" id="form-msg" role="status" aria-live="polite"></p>
+    <!-- ===================== FEATURES ===================== -->
+    <section class="section" id="features">
+      <div class="section-head reveal">
+        <h2 class="section-title gradient-text" id="features-title"></h2>
+      </div>
+      <div class="features-grid" id="features-grid"></div>
+    </section>
 
-    <p class="hint" id="hint">
-      Tipp: Maus, Finger oder <kbd>Leertaste</kbd> gedrückt halten für Warp-Speed
-    </p>
+    <!-- ===================== ÜBER UNS (live) ===================== -->
+    <section class="section only-live" id="about">
+      <div class="section-head reveal">
+        <h2 class="section-title gradient-text" id="about-title"></h2>
+      </div>
+      <div class="about reveal" id="about-body">
+        <p class="about-text" id="about-text"></p>
+        <img class="about-img" id="about-img" alt="" hidden>
+      </div>
+    </section>
 
-    <footer>© <span id="year"></span> · Bald mehr.</footer>
+    <!-- ===================== ZAHLEN (live) ===================== -->
+    <section class="section only-live" id="stats">
+      <div class="stats" id="stats-grid"></div>
+    </section>
+
+    <!-- ===================== ROADMAP ===================== -->
+    <section class="section" id="roadmap">
+      <div class="section-head reveal">
+        <h2 class="section-title gradient-text" id="roadmap-title"></h2>
+      </div>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <!-- ===================== SPIEL ===================== -->
+    <section class="section" id="game-section">
+      <div class="card game-card reveal">
+        <div class="game-emoji" aria-hidden="true">🛸</div>
+        <div>
+          <h3 id="game-title"></h3>
+          <p id="game-text"></p>
+          <p class="game-best" id="game-best" hidden></p>
+        </div>
+        <button class="btn btn-primary" id="game-start-btn" type="button" data-ui="playNow"></button>
+      </div>
+    </section>
+
+    <!-- ===================== FAQ ===================== -->
+    <section class="section" id="faq">
+      <div class="section-head reveal">
+        <h2 class="section-title gradient-text" id="faq-title"></h2>
+      </div>
+      <div class="faq" id="faq-list"></div>
+    </section>
+
+    <!-- ===================== NEWSLETTER (live) ===================== -->
+    <section class="section only-live" id="newsletter">
+      <div class="card newsletter reveal">
+        <h2 class="gradient-text" id="newsletter-title"></h2>
+        <p id="newsletter-text"></p>
+        <form class="notify signup-form" id="signup-live" novalidate>
+          <label class="sr-only" for="email-live" data-ui="emailLabel"></label>
+          <input id="email-live" name="email" type="email" autocomplete="email" required>
+          <input class="hp" type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button class="btn btn-primary" type="submit"></button>
+        </form>
+        <p class="form-msg" role="status" aria-live="polite" data-msg-for="signup-live"></p>
+      </div>
+    </section>
   </main>
 
+  <footer class="footer" id="footer">
+    <div class="social" id="social"></div>
+    <p class="footer-text" id="footer-text"></p>
+    <div class="footer-meta">
+      <span>© <span id="year"></span> <span id="footer-brand"></span></span>
+      <span id="visitors" hidden></span>
+      <span id="eggs-count" hidden></span>
+      <a href="admin.html" id="admin-link">🔒 <span data-ui="admin"></span></a>
+    </div>
+  </footer>
+
+  <!-- ===================== SPIEL-FENSTER ===================== -->
+  <div class="game-modal" id="game" role="dialog" aria-modal="true" aria-labelledby="game-dialog-title" hidden>
+    <canvas id="game-canvas"></canvas>
+    <button class="icon-btn game-pause" id="game-pause" type="button" aria-label="Pause">⏸</button>
+    <button class="icon-btn game-close" id="game-close" type="button" aria-label="Schließen">✕</button>
+    <div class="card game-overlay" id="game-overlay"></div>
+  </div>
+
+  <canvas id="fx" aria-hidden="true"></canvas>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script>
-  (() => {
-    'use strict';
-
-    // =========================================================
-    //  Einstellungen – hier anpassen
-    // =========================================================
-    const CONFIG = {
-      // Start-Zeitpunkt (ISO-Format inkl. Zeitzone)
-      launchDate: '2026-12-01T00:00:00+01:00',
-      timeZone: 'Europe/Berlin', // für die Anzeige des Startdatums
-
-      // Optional: URL, an die E-Mail-Anmeldungen per POST (JSON) geschickt werden,
-      // z. B. ein Formspree-Endpunkt. Leer lassen = Demo-Modus: Die Adresse wird
-      // NICHT gespeichert, es erscheint nur die Erfolgsmeldung.
-      formEndpoint: '',
-    };
-
-    const $ = (sel) => document.querySelector(sel);
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    // =========================================================
-    //  Sternenfeld
-    // =========================================================
-    const canvas = $('#space');
-    const ctx = canvas.getContext('2d');
-    const BG = '5, 6, 15';
-    const BASE_SPEED = 0.0022;
-    const WARP_SPEED = 0.045;
-    const HUES = [190, 210, 250, 290];
-
-    let w = 0, h = 0, dpr = 1;
-    let stars = [];
-    let speed = BASE_SPEED;
-    let targetSpeed = BASE_SPEED;
-    let rainbow = false;
-    let last = performance.now();
-    const center = { x: 0, y: 0, tx: 0, ty: 0 };
-
-    function makeStar(s, fresh) {
-      s.x = (Math.random() * 2 - 1) * w * 0.5;
-      s.y = (Math.random() * 2 - 1) * h * 0.5;
-      s.z = fresh ? 0.05 + Math.random() * 0.95 : 1;
-      s.pz = s.z;
-      s.colored = Math.random() < 0.25;
-      s.hue = HUES[(Math.random() * HUES.length) | 0];
-      return s;
-    }
-
-    function starStyle(s, alpha, now) {
-      if (rainbow) return `hsla(${(s.hue + s.x + now * 0.15) % 360}, 95%, 70%, ${alpha})`;
-      if (s.colored) return `hsla(${s.hue}, 90%, 78%, ${alpha})`;
-      return `rgba(235, 240, 255, ${alpha})`;
-    }
-
-    function resize() {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = window.innerWidth;
-      h = window.innerHeight;
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.lineCap = 'round';
-      center.x = center.tx = w / 2;
-      center.y = center.ty = h / 2;
-
-      const count = Math.max(150, Math.min(900, Math.round((w * h) / 1400)));
-      while (stars.length < count) stars.push(makeStar({}, true));
-      stars.length = count;
-
-      ctx.fillStyle = `rgb(${BG})`;
-      ctx.fillRect(0, 0, w, h);
-      if (reduceMotion) drawStatic();
-    }
-
-    function drawStatic() {
-      ctx.fillStyle = `rgb(${BG})`;
-      ctx.fillRect(0, 0, w, h);
-      for (const s of stars) {
-        const t = 1 - s.z;
-        ctx.fillStyle = starStyle(s, Math.min(1, t * 3), 0);
-        ctx.beginPath();
-        ctx.arc(center.x + s.x / s.z, center.y + s.y / s.z, t * 1.2 + 0.3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    function frame(now) {
-      const dt = Math.min(3, Math.max(0.1, (now - last) / 16.667));
-      last = now;
-
-      speed += (targetSpeed - speed) * Math.min(1, 0.06 * dt);
-      center.x += (center.tx - center.x) * Math.min(1, 0.05 * dt);
-      center.y += (center.ty - center.y) * Math.min(1, 0.05 * dt);
-
-      // Je schneller, desto längere Lichtspuren
-      const warp = (speed - BASE_SPEED) / (WARP_SPEED - BASE_SPEED);
-      ctx.fillStyle = `rgba(${BG}, ${0.9 - Math.max(0, warp) * 0.6})`;
-      ctx.fillRect(0, 0, w, h);
-
-      for (const s of stars) {
-        s.pz = s.z;
-        s.z -= speed * dt;
-        if (s.z <= 0.005) { makeStar(s, false); continue; }
-
-        const sx = center.x + s.x / s.z;
-        const sy = center.y + s.y / s.z;
-        if (sx < -20 || sx > w + 20 || sy < -20 || sy > h + 20) { makeStar(s, false); continue; }
-
-        const px = center.x + s.x / s.pz;
-        const py = center.y + s.y / s.pz;
-        const t = 1 - s.z;
-
-        ctx.strokeStyle = starStyle(s, Math.min(1, t * 3), now);
-        ctx.lineWidth = t * 2.4 + 0.35;
-        ctx.beginPath();
-        ctx.moveTo(px, py);
-        ctx.lineTo(sx, sy);
-        ctx.stroke();
-      }
-
-      requestAnimationFrame(frame);
-    }
-
-    window.addEventListener('resize', resize);
-    resize();
-    if (!reduceMotion) requestAnimationFrame(frame);
-
-    // =========================================================
-    //  Steuerung: Parallaxe + Warp
-    // =========================================================
-    const isUi = (el) => !!(el && el.closest && el.closest('form, a, button, input, label'));
-
-    function setWarp(on) {
-      if (reduceMotion) return;
-      targetSpeed = on ? WARP_SPEED : BASE_SPEED;
-      document.body.classList.toggle('warping', on);
-    }
-
-    window.addEventListener('pointermove', (e) => {
-      center.tx = w / 2 + (e.clientX - w / 2) * 0.2;
-      center.ty = h / 2 + (e.clientY - h / 2) * 0.2;
-    });
-    window.addEventListener('pointerdown', (e) => { if (!isUi(e.target)) setWarp(true); });
-    window.addEventListener('pointerup', () => setWarp(false));
-    window.addEventListener('pointercancel', () => setWarp(false));
-    window.addEventListener('blur', () => setWarp(false));
-    window.addEventListener('contextmenu', (e) => { if (!isUi(e.target)) e.preventDefault(); });
-
-    window.addEventListener('keydown', (e) => {
-      if (e.code !== 'Space' || isUi(document.activeElement)) return;
-      e.preventDefault();
-      if (!e.repeat) setWarp(true);
-    });
-    window.addEventListener('keyup', (e) => { if (e.code === 'Space') setWarp(false); });
-
-    if (reduceMotion) $('#hint').hidden = true;
-
-    // =========================================================
-    //  Glitch-Effekt im Titel
-    // =========================================================
-    const title = $('#title');
-    function scheduleGlitch() {
-      setTimeout(() => {
-        title.classList.add('glitch');
-        setTimeout(() => { title.classList.remove('glitch'); scheduleGlitch(); }, 400);
-      }, 3000 + Math.random() * 4000);
-    }
-    if (!reduceMotion) scheduleGlitch();
-
-    // =========================================================
-    //  Countdown
-    // =========================================================
-    const launch = new Date(CONFIG.launchDate).getTime();
-    const cd = {
-      days: $('#cd-days'),
-      hours: $('#cd-hours'),
-      minutes: $('#cd-minutes'),
-      seconds: $('#cd-seconds'),
-    };
-    let timer = 0;
-
-    function setNum(el, value) {
-      const text = String(value).padStart(2, '0');
-      if (el.textContent === text) return;
-      el.textContent = text;
-      if (reduceMotion) return;
-      el.classList.remove('tick');
-      void el.offsetWidth; // Animation neu starten
-      el.classList.add('tick');
-    }
-
-    function updateCountdown() {
-      const diff = launch - Date.now();
-      if (diff <= 0) {
-        $('#countdown').hidden = true;
-        $('#launch-date').hidden = true;
-        $('#live').hidden = false;
-        clearInterval(timer);
-        return;
-      }
-      const total = Math.floor(diff / 1000);
-      setNum(cd.days, Math.floor(total / 86400));
-      setNum(cd.hours, Math.floor((total % 86400) / 3600));
-      setNum(cd.minutes, Math.floor((total % 3600) / 60));
-      setNum(cd.seconds, total % 60);
-    }
-
-    if (Number.isFinite(launch)) {
-      $('#launch-date').textContent = 'Start: ' + new Date(launch).toLocaleDateString('de-DE', {
-        day: 'numeric', month: 'long', year: 'numeric', timeZone: CONFIG.timeZone,
-      });
-      updateCountdown();
-      timer = setInterval(updateCountdown, 1000);
-    } else {
-      $('.countdown-wrap').hidden = true;
-    }
-
-    // =========================================================
-    //  E-Mail-Anmeldung
-    // =========================================================
-    const form = $('#notify');
-    const input = $('#email');
-    const button = $('#notify-btn');
-    const msg = $('#form-msg');
-
-    function showMsg(text, kind) {
-      msg.textContent = text;
-      msg.className = 'form-msg ' + (kind || '');
-    }
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = input.value.trim();
-      if (!email || !input.checkValidity()) {
-        showMsg('Bitte gib eine gültige E-Mail-Adresse ein.', 'error');
-        input.focus();
-        return;
-      }
-
-      button.disabled = true;
-      showMsg('Wird gesendet …');
-      try {
-        if (CONFIG.formEndpoint) {
-          const res = await fetch(CONFIG.formEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ email }),
-          });
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-        }
-        input.value = '';
-        input.disabled = true;
-        showMsg('Danke! Wir melden uns, sobald es losgeht. 🚀', 'ok');
-        setWarp(true);
-        setTimeout(() => setWarp(false), 1200);
-      } catch (err) {
-        showMsg('Hat leider nicht geklappt. Versuch es bitte später noch mal.', 'error');
-        button.disabled = false;
-      }
-    });
-
-    // =========================================================
-    //  Toast + Easter Egg (Konami-Code: ↑ ↑ ↓ ↓ ← → ← → B A)
-    // =========================================================
-    const toastEl = $('#toast');
-    let toastTimer = 0;
-    function toast(text) {
-      toastEl.textContent = text;
-      toastEl.classList.add('show');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
-    }
-
-    const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
-    let konamiPos = 0;
-    window.addEventListener('keydown', (e) => {
-      if (isUi(document.activeElement)) return;
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      konamiPos = key === KONAMI[konamiPos] ? konamiPos + 1 : (key === KONAMI[0] ? 1 : 0);
-      if (konamiPos === KONAMI.length) {
-        konamiPos = 0;
-        rainbow = !rainbow;
-        if (reduceMotion) drawStatic();
-        toast(rainbow ? '🌈 Easter Egg gefunden: Regenbogen-Modus!' : 'Regenbogen-Modus aus');
-      }
-    });
-
-    $('#year').textContent = new Date().getFullYear();
-  })();
-  </script>
+  <script src="assets/js/icons.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/sound.js"></script>
+  <script src="assets/js/fx.js"></script>
+  <script src="assets/js/space.js"></script>
+  <script src="assets/js/game.js"></script>
+  <script src="assets/js/site.js"></script>
 </body>
 </html>

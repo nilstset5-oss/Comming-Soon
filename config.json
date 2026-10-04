@@ -1,0 +1,396 @@
+{
+  "version": 1,
+  "mode": "auto",
+  "launchDate": "2026-12-01T00:00",
+  "timeZone": "Europe/Berlin",
+  "defaultLang": "auto",
+  "brand": {
+    "name": "NOVA",
+    "logoType": "emoji",
+    "logoEmoji": "🚀",
+    "logoImage": ""
+  },
+  "theme": {
+    "preset": "galaxy",
+    "bg": "#05060f",
+    "accent1": "#7c5cff",
+    "accent2": "#00d4ff",
+    "accent3": "#ff4fd8"
+  },
+  "effects": {
+    "stars": true,
+    "starDensity": 1,
+    "starSpeed": 1,
+    "nebula": true,
+    "planets": true,
+    "rocket": true,
+    "glitch": true,
+    "tilt": true,
+    "parallax": true,
+    "soundDefault": false
+  },
+  "countdown": {
+    "style": "flip"
+  },
+  "banner": {
+    "enabled": false,
+    "text": {
+      "de": "🎉 Frühstarter-Aktion: Die ersten 100 Anmeldungen bekommen eine Überraschung!",
+      "en": "🎉 Early birds: the first 100 sign-ups get a surprise!"
+    },
+    "link": ""
+  },
+  "soon": {
+    "badge": {
+      "de": "In Arbeit",
+      "en": "In the works"
+    },
+    "headline": {
+      "de": "Coming Soon",
+      "en": "Coming Soon"
+    },
+    "text": {
+      "de": "Hier entsteht gerade etwas Großes. Trag dich ein und sei beim Start als Erstes dabei.",
+      "en": "Something big is on its way. Sign up and be the first to know when we launch."
+    }
+  },
+  "live": {
+    "badge": {
+      "de": "Jetzt live",
+      "en": "Now live"
+    },
+    "headline": {
+      "de": "{name} ist da.",
+      "en": "{name} is here."
+    },
+    "text": {
+      "de": "Das Warten hat ein Ende. Entdecke, was wir für dich gebaut haben – schneller, schöner und mit mehr Sternenstaub als je zuvor.",
+      "en": "The wait is over. Discover what we built for you – faster, prettier and with more stardust than ever."
+    },
+    "ctaText": {
+      "de": "Jetzt entdecken",
+      "en": "Explore now"
+    },
+    "ctaLink": "#features"
+  },
+  "signup": {
+    "enabled": true,
+    "endpoint": "",
+    "button": {
+      "de": "Benachrichtige mich",
+      "en": "Notify me"
+    },
+    "success": {
+      "de": "Danke! Wir melden uns, sobald es losgeht. 🚀",
+      "en": "Thanks! We’ll let you know when we launch. 🚀"
+    },
+    "liveTitle": {
+      "de": "Bleib auf dem Laufenden",
+      "en": "Stay in the loop"
+    },
+    "liveText": {
+      "de": "Neuigkeiten, Updates und Überraschungen – direkt in dein Postfach.",
+      "en": "News, updates and surprises – straight to your inbox."
+    }
+  },
+  "sections": {
+    "features": true,
+    "about": true,
+    "stats": true,
+    "roadmap": true,
+    "game": true,
+    "faq": true,
+    "social": true
+  },
+  "features": {
+    "title": {
+      "de": "Was dich erwartet",
+      "en": "What to expect"
+    },
+    "revealBeforeLaunch": false,
+    "items": [
+      {
+        "icon": "⚡",
+        "title": {
+          "de": "Blitzschnell",
+          "en": "Lightning fast"
+        },
+        "text": {
+          "de": "Gebaut für Tempo. Keine Ladebalken, kein Warten.",
+          "en": "Built for speed. No loading bars, no waiting."
+        }
+      },
+      {
+        "icon": "🎨",
+        "title": {
+          "de": "Wunderschön",
+          "en": "Beautiful"
+        },
+        "text": {
+          "de": "Ein Design, das man so schnell nicht vergisst.",
+          "en": "A design you won’t forget anytime soon."
+        }
+      },
+      {
+        "icon": "🔒",
+        "title": {
+          "de": "Sicher",
+          "en": "Secure"
+        },
+        "text": {
+          "de": "Deine Daten bleiben deine Daten. Punkt.",
+          "en": "Your data stays yours. Period."
+        }
+      },
+      {
+        "icon": "🌍",
+        "title": {
+          "de": "Überall",
+          "en": "Everywhere"
+        },
+        "text": {
+          "de": "Auf Handy, Tablet und Computer – überall zu Hause.",
+          "en": "On phone, tablet and desktop – at home everywhere."
+        }
+      },
+      {
+        "icon": "🤝",
+        "title": {
+          "de": "Community",
+          "en": "Community"
+        },
+        "text": {
+          "de": "Gemeinsam bauen wir etwas, das bleibt.",
+          "en": "Together we build something that lasts."
+        }
+      },
+      {
+        "icon": "✨",
+        "title": {
+          "de": "Und noch mehr …",
+          "en": "And much more …"
+        },
+        "text": {
+          "de": "Ein paar Überraschungen verraten wir erst zum Start.",
+          "en": "Some surprises we only reveal at launch."
+        }
+      }
+    ]
+  },
+  "about": {
+    "title": {
+      "de": "Über uns",
+      "en": "About us"
+    },
+    "text": {
+      "de": "Wir sind ein kleines Team mit großen Träumen. {name} ist unser Herzensprojekt – entstanden aus der Idee, etwas zu bauen, das Menschen wirklich begeistert.\n\nMonatelang haben wir getüftelt, verworfen und neu gedacht. Jetzt ist es so weit.",
+      "en": "We are a small team with big dreams. {name} is our passion project – born from the idea of building something that genuinely excites people.\n\nFor months we tinkered, scrapped and rethought. Now the time has come."
+    },
+    "image": ""
+  },
+  "stats": {
+    "items": [
+      {
+        "value": 900,
+        "suffix": "+",
+        "label": {
+          "de": "Sterne im Hintergrund",
+          "en": "stars in the background"
+        }
+      },
+      {
+        "value": 7,
+        "suffix": "",
+        "label": {
+          "de": "versteckte Easter Eggs",
+          "en": "hidden Easter eggs"
+        }
+      },
+      {
+        "value": 100,
+        "suffix": "%",
+        "label": {
+          "de": "Liebe zum Detail",
+          "en": "attention to detail"
+        }
+      },
+      {
+        "value": 1,
+        "suffix": "",
+        "label": {
+          "de": "Mini-Spiel",
+          "en": "mini game"
+        }
+      }
+    ]
+  },
+  "roadmap": {
+    "title": {
+      "de": "Roadmap",
+      "en": "Roadmap"
+    },
+    "items": [
+      {
+        "date": "Q3 2026",
+        "status": "done",
+        "title": {
+          "de": "Die Idee",
+          "en": "The idea"
+        },
+        "text": {
+          "de": "Aus einem Gedanken wird ein Plan.",
+          "en": "A thought becomes a plan."
+        }
+      },
+      {
+        "date": "Q4 2026",
+        "status": "active",
+        "title": {
+          "de": "Bauphase",
+          "en": "Building"
+        },
+        "text": {
+          "de": "Wir bauen, testen und polieren jedes Detail.",
+          "en": "We build, test and polish every detail."
+        }
+      },
+      {
+        "date": "01.12.2026",
+        "status": "planned",
+        "title": {
+          "de": "Launch 🚀",
+          "en": "Launch 🚀"
+        },
+        "text": {
+          "de": "Der große Tag – sei dabei!",
+          "en": "The big day – be there!"
+        }
+      },
+      {
+        "date": "2027",
+        "status": "planned",
+        "title": {
+          "de": "Und weiter …",
+          "en": "And beyond …"
+        },
+        "text": {
+          "de": "Neue Features, neue Welten.",
+          "en": "New features, new worlds."
+        }
+      }
+    ]
+  },
+  "faq": {
+    "title": {
+      "de": "Häufige Fragen",
+      "en": "FAQ"
+    },
+    "items": [
+      {
+        "q": {
+          "de": "Wann geht es los?",
+          "en": "When does it launch?"
+        },
+        "a": {
+          "de": "Der Countdown oben zeigt dir genau, wann. Trag dich ein, dann sagen wir dir rechtzeitig Bescheid.",
+          "en": "The countdown above shows you exactly when. Sign up and we’ll remind you in time."
+        }
+      },
+      {
+        "q": {
+          "de": "Kostet das etwas?",
+          "en": "Does it cost anything?"
+        },
+        "a": {
+          "de": "Das verraten wir zum Start. Nur so viel: Es lohnt sich.",
+          "en": "We’ll reveal that at launch. Let’s just say: it’s worth it."
+        }
+      },
+      {
+        "q": {
+          "de": "Wie bleibe ich auf dem Laufenden?",
+          "en": "How do I stay up to date?"
+        },
+        "a": {
+          "de": "Trag deine E-Mail-Adresse ein oder folge uns auf Social Media.",
+          "en": "Enter your email address or follow us on social media."
+        }
+      },
+      {
+        "q": {
+          "de": "Gibt es hier wirklich Easter Eggs?",
+          "en": "Are there really Easter eggs here?"
+        },
+        "a": {
+          "de": "Vielleicht. Probier mal ein paar Tasten aus … 😉",
+          "en": "Maybe. Try pressing a few keys … 😉"
+        }
+      }
+    ]
+  },
+  "game": {
+    "title": {
+      "de": "Asteroid Run",
+      "en": "Asteroid Run"
+    },
+    "text": {
+      "de": "Langweilig beim Warten? Weich Asteroiden aus, sammle Sterne und knack den Highscore.",
+      "en": "Bored while waiting? Dodge asteroids, collect stars and beat the high score."
+    }
+  },
+  "social": [
+    {
+      "type": "github",
+      "url": "https://github.com/nilstset5-oss/Comming-Soon"
+    },
+    {
+      "type": "instagram",
+      "url": ""
+    },
+    {
+      "type": "tiktok",
+      "url": ""
+    },
+    {
+      "type": "youtube",
+      "url": ""
+    },
+    {
+      "type": "discord",
+      "url": ""
+    }
+  ],
+  "footer": {
+    "text": {
+      "de": "Mit ❤️ und Sternenstaub gebaut.",
+      "en": "Built with ❤️ and stardust."
+    },
+    "showAdminLink": true
+  },
+  "easterEggs": {
+    "enabled": true,
+    "secretWord": "nova",
+    "secretMessage": {
+      "de": "🤫 Psst … du hast das geheime Wort gefunden!",
+      "en": "🤫 Psst … you found the secret word!"
+    }
+  },
+  "analytics": {
+    "goatcounter": "",
+    "showCounter": false
+  },
+  "seo": {
+    "title": "{name} – Coming Soon",
+    "description": "Hier entsteht gerade etwas Großes. Trag dich ein und sei beim Start als Erstes dabei.",
+    "siteUrl": "https://nilstset5-oss.github.io/Comming-Soon/"
+  },
+  "github": {
+    "owner": "nilstset5-oss",
+    "repo": "Comming-Soon",
+    "branch": ""
+  },
+  "admin": {
+    "user": "admin",
+    "passHash": "a7e2d76baf59f15d1d5932de61f3e8418c802c6386d9ea4851fcd82617aa0b53"
+  }
+}

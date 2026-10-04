@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#05060f">
+  <title>404 – Lost in Space</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+  <style>
+    :root { --bg: #05060f; --fg: #e8ecff; --muted: #8b93b8; --a1: #7c5cff; --a2: #00d4ff; --a3: #ff4fd8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg); color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+    main {
+      position: relative; z-index: 1;
+      min-height: 100%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      padding: 32px 16px; text-align: center;
+    }
+    .astro { font-size: 5rem; animation: drift 6s ease-in-out infinite; }
+    @keyframes drift { 0%, 100% { transform: translate(0, 0) rotate(-12deg); } 50% { transform: translate(14px, -18px) rotate(14deg); } }
+    h1 {
+      font-size: clamp(5rem, 22vw, 11rem); font-weight: 900; line-height: 0.9; letter-spacing: -0.05em;
+      background: linear-gradient(90deg, var(--a2), var(--a1), var(--a3));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    p { color: var(--muted); max-width: 30rem; line-height: 1.6; }
+    a {
+      display: inline-block; margin-top: 8px; padding: 13px 24px; border-radius: 999px;
+      background: linear-gradient(135deg, var(--a1), var(--a3)); color: #fff;
+      font-weight: 700; text-decoration: none;
+    }
+    a:hover { box-shadow: 0 10px 30px rgba(255, 79, 216, 0.35); }
+    @media (prefers-reduced-motion: reduce) { .astro { animation: none; } }
+  </style>
+</head>
+<body>
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <main>
+    <div class="astro" aria-hidden="true">🧑‍🚀</div>
+    <h1>404</h1>
+    <p id="msg">Houston, wir haben ein Problem: Diese Seite ist im Weltraum verloren gegangen.</p>
+    <a id="home" href="/">🚀 Zurück zur Basis</a>
+  </main>
+  <script>
+    (function () {
+      // Startseite finden – auch bei Projektseiten wie name.github.io/repo/
+      var home = '/';
+      if (/\.github\.io$/.test(location.hostname)) {
+        var first = location.pathname.split('/').filter(Boolean)[0];
+        if (first) home = '/' + first + '/';
+      }
+      document.getElementById('home').href = home;
+      if (!/^de\b/i.test(navigator.language || '')) {
+        document.documentElement.lang = 'en';
+        document.getElementById('msg').textContent = 'Houston, we have a problem: this page got lost in space.';
+        document.getElementById('home').textContent = '🚀 Back to base';
+      }
+
+      // Langsam treibende Sterne
+      var c = document.getElementById('stars'), ctx = c.getContext('2d'), stars = [], w, h;
+      function resize() {
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        w = innerWidth; h = innerHeight;
+        c.width = w * dpr; c.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        stars = [];
+        for (var i = 0; i < Math.min(400, w * h / 3000); i++) {
+          stars.push({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.4 + 0.2, v: Math.random() * 0.15 + 0.02, t: Math.random() * 6 });
+        }
+      }
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        for (var i = 0; i < stars.length; i++) {
+          var s = stars[i];
+          s.x -= s.v; s.t += 0.03;
+          if (s.x < 0) s.x = w;
+          ctx.globalAlpha = 0.4 + Math.sin(s.t) * 0.3;
+          ctx.fillStyle = '#fff';
+          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+        }
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) requestAnimationFrame(draw);
+      }
+      addEventListener('resize', resize);
+      resize(); draw();
+    })();
+  </script>
+</body>
+</html>
