@@ -91,6 +91,16 @@
     return e;
   }
 
+  // Markiert ein Element als direkt bearbeitbar (im Studio anklicken & tippen)
+  function editable(node, path, { multi = false, i18n = true } = {}) {
+    const e = typeof node === 'string' ? $(node) : node;
+    if (!e) return e;
+    e.dataset.edit = path;
+    if (multi) e.dataset.editMulti = '1'; else delete e.dataset.editMulti;
+    if (!i18n) e.dataset.editI18n = '0'; else delete e.dataset.editI18n;
+    return e;
+  }
+
   function render() {
     const cfg = state.cfg;
     const live = state.mode === 'live';
@@ -114,6 +124,7 @@
     // Marke, Tab-Titel, Favicon
     renderLogo($('#brand-logo'));
     setText('#brand-name', name);
+    editable('#brand-name', 'brand.name', { i18n: false });
     setText('#footer-brand', name);
     document.title = live ? `${name} – ${t(cfg.live.badge)}` : U.format(cfg.seo.title, { name });
     updateFavicon();
@@ -134,17 +145,21 @@
       bt.append(a);
     } else {
       bt.textContent = bannerText;
+      editable(bt, 'banner.text');
     }
     bt.dataset.key = bannerKey;
     updateHeaderOffset();
 
     // Hero
     setText('#badge-text', t(live ? cfg.live.badge : cfg.soon.badge));
+    editable('#badge-text', live ? 'live.badge' : 'soon.badge');
     const title = live ? t(cfg.live.headline) : t(cfg.soon.headline);
     const titleEl = $('#title');
     titleEl.textContent = title;
     titleEl.dataset.text = title;
+    editable(titleEl, live ? 'live.headline' : 'soon.headline');
     setText('#lead', t(live ? cfg.live.text : cfg.soon.text));
+    editable('#lead', live ? 'live.text' : 'soon.text', { multi: true });
 
     // Countdown
     state.countdown.build(cfg.countdown.style, { days: ui('days'), hours: ui('hours'), minutes: ui('minutes'), seconds: ui('seconds') });
@@ -161,6 +176,7 @@
     // Live-Buttons
     const cta = $('#cta-main');
     cta.textContent = t(cfg.live.ctaText);
+    editable(cta, 'live.ctaText');
     cta.href = U.safeUrl(cfg.live.ctaLink) || '#features';
     cta.hidden = !t(cfg.live.ctaText);
     $('#cta-game').hidden = !cfg.sections.game;
@@ -185,6 +201,8 @@
     renderFaq();
     setText('#newsletter-title', t(cfg.signup.liveTitle));
     setText('#newsletter-text', t(cfg.signup.liveText));
+    editable('#newsletter-title', 'signup.liveTitle');
+    editable('#newsletter-text', 'signup.liveText', { multi: true });
 
     $('#features').hidden = !cfg.sections.features || !cfg.features.items.length;
     $('#about').hidden = !cfg.sections.about || !t(cfg.about.text);
@@ -202,6 +220,8 @@
     if (firstSection) $('#scroll-cue').href = '#' + firstSection.id;
 
     CS.space.configure(cfg);
+    if (CS.chat) CS.chat.configure({ cfg, lang: state.lang, mode: state.mode, studio: state.studio });
+    if (CS.live) CS.live.configure({ cfg, lang: state.lang });
     observeReveals();
     state.rendered = true;
   }
@@ -262,6 +282,7 @@
   function renderFeatures(live) {
     const cfg = state.cfg;
     setText('#features-title', t(cfg.features.title));
+    editable('#features-title', 'features.title');
     const grid = $('#features-grid');
     grid.textContent = '';
     const locked = !live && !cfg.features.revealBeforeLaunch;
@@ -279,7 +300,9 @@
         card.append(tb, l1, l2, el('span', 'lock-note', '✨ ' + ui('locked')));
         card.title = ui('locked');
       } else {
-        card.append(el('div', 'feature-icon', item.icon || '✨'), el('h3', null, t(item.title)), el('p', null, t(item.text)));
+        card.append(el('div', 'feature-icon', item.icon || '✨'),
+          editable(el('h3', null, t(item.title)), `features.items.${i}.title`),
+          editable(el('p', null, t(item.text)), `features.items.${i}.text`, { multi: true }));
       }
       grid.append(card);
     });
@@ -289,6 +312,8 @@
     const cfg = state.cfg;
     setText('#about-title', t(cfg.about.title));
     setText('#about-text', t(cfg.about.text));
+    editable('#about-title', 'about.title');
+    editable('#about-text', 'about.text', { multi: true });
     const img = $('#about-img');
     const src = U.safeUrl(cfg.about.image, { allowData: true });
     img.hidden = !src;
@@ -301,12 +326,12 @@
   function renderStats() {
     const grid = $('#stats-grid');
     grid.textContent = '';
-    state.cfg.stats.items.forEach((s) => {
+    state.cfg.stats.items.forEach((s, i) => {
       const card = el('div', 'card stat reveal');
       const value = el('div', 'stat-value gradient-text', state.statsCounted ? Number(s.value || 0).toLocaleString(locale()) + (s.suffix || '') : '0');
       value.dataset.value = s.value;
       value.dataset.suffix = s.suffix || '';
-      card.append(value, el('div', 'stat-label', t(s.label)));
+      card.append(value, editable(el('div', 'stat-label', t(s.label)), `stats.items.${i}.label`));
       grid.append(card);
     });
   }
@@ -314,18 +339,19 @@
   function renderRoadmap() {
     const cfg = state.cfg;
     setText('#roadmap-title', t(cfg.roadmap.title));
+    editable('#roadmap-title', 'roadmap.title');
     const tl = $('#timeline');
     tl.textContent = '';
-    cfg.roadmap.items.forEach((item) => {
+    cfg.roadmap.items.forEach((item, i) => {
       const status = ['done', 'active', 'planned'].includes(item.status) ? item.status : 'planned';
       const row = el('div', 'card tl-item reveal ' + status);
       row.append(el('span', 'tl-dot', status === 'done' ? '✓' : ''));
       const head = el('div', 'tl-head');
       if (item.date) head.append(el('span', 'tl-date', item.date));
       head.append(el('span', 'tl-status', ui('status_' + status)));
-      row.append(head, el('h3', null, t(item.title)));
+      row.append(head, editable(el('h3', null, t(item.title)), `roadmap.items.${i}.title`));
       const text = t(item.text);
-      if (text) row.append(el('p', null, text));
+      if (text || state.studio) row.append(editable(el('p', null, text), `roadmap.items.${i}.text`, { multi: true }));
       tl.append(row);
     });
   }
@@ -334,6 +360,8 @@
     const cfg = state.cfg;
     setText('#game-title', t(cfg.game.title));
     setText('#game-text', t(cfg.game.text));
+    editable('#game-title', 'game.title');
+    editable('#game-text', 'game.text', { multi: true });
     const best = CS.game ? CS.game.best() : 0;
     const bestEl = $('#game-best');
     bestEl.hidden = !best;
@@ -343,13 +371,16 @@
   function renderFaq() {
     const cfg = state.cfg;
     setText('#faq-title', t(cfg.faq.title));
+    editable('#faq-title', 'faq.title');
     const list = $('#faq-list');
     const open = $$('details', list).map((d) => d.open);
     list.textContent = '';
     cfg.faq.items.forEach((item, i) => {
       const d = el('details', 'card reveal');
       d.open = !!open[i];
-      d.append(el('summary', null, t(item.q)), el('div', 'answer', t(item.a)));
+      const q = editable(el('span', null, t(item.q)), `faq.items.${i}.q`);
+      d.append(el('summary', null), editable(el('div', 'answer', t(item.a)), `faq.items.${i}.a`, { multi: true }));
+      d.firstChild.append(q);
       list.append(d);
     });
   }
@@ -405,6 +436,7 @@
     }
     social.hidden = !count;
     setText('#footer-text', t(cfg.footer.text));
+    editable('#footer-text', 'footer.text');
     setText('#year', new Date().getFullYear());
     $('#admin-link').hidden = B.kind === 'artifact' || !cfg.footer.showAdminLink;
     renderEggCount();
@@ -425,6 +457,30 @@
     state.countdown.set('hours', Math.floor((total % 86400) / 3600));
     state.countdown.set('minutes', Math.floor((total % 3600) / 60));
     state.countdown.set('seconds', total % 60);
+    finalCountdown(Math.ceil(diff / 1000));
+  }
+
+  // Großer Countdown in den letzten 10 Sekunden vor dem automatischen Start
+  function finalCountdown(sec) {
+    const cfg = state.cfg;
+    const show = cfg.effects.finalCountdown !== false && cfg.mode === 'auto' && !state.forcedMode && sec >= 1 && sec <= 10;
+    let box = $('#final-count');
+    body.classList.toggle('final', show);
+    if (!show) { if (box) box.remove(); return; }
+    if (!box) {
+      box = el('div', 'final-count');
+      box.id = 'final-count';
+      box.setAttribute('aria-live', 'assertive');
+      body.append(box);
+    }
+    const text = String(sec);
+    if (box.textContent === text) return;
+    box.textContent = text;
+    box.classList.remove('pulse');
+    void box.offsetWidth;
+    box.classList.add('pulse');
+    CS.sound.sfx(sec <= 3 ? 'beepHigh' : 'beep');
+    if (sec <= 3) fx.confetti({ count: 20 + (4 - sec) * 15, speed: 10 });
   }
 
   function tick() {
@@ -445,6 +501,9 @@
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
     setWarp(true);
     CS.sound.sfx('liftoff');
+    const fc = $('#final-count');
+    if (fc) fc.remove();
+    body.classList.remove('final');
     const banner = el('div', 'liftoff gradient-text', ui('liftoff'));
     body.append(banner);
     setTimeout(() => {
@@ -473,6 +532,7 @@
 
   function inWarpZone(target) {
     if (!target || !target.closest) return false;
+    if (state.studio && target.closest('[data-edit]')) return false;
     if (target.closest(INTERACTIVE)) return false;
     return !!target.closest('.hero') || target === body || target === document.documentElement ||
       target.matches('main, .section, .footer, .planets, .nebula');
@@ -497,7 +557,7 @@
 
   function typingInField() {
     const a = document.activeElement;
-    return !!(a && a.closest && a.closest('input, textarea, select, button, summary, a'));
+    return !!(a && (a.isContentEditable || (a.closest && a.closest('input, textarea, select, button, summary, a'))));
   }
 
   window.addEventListener('keydown', (e) => {
@@ -863,7 +923,7 @@
   $$('.lang-switch button').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
 
   // Spiel
-  function openGame() { CS.game.open({ lang: state.lang, title: t(state.cfg.game.title) }); }
+  function openGame() { CS.game.open({ lang: state.lang, title: t(state.cfg.game.title), missionControl: state.cfg.ai.missionControl !== false }); }
   $('#btn-game').addEventListener('click', openGame);
   $('#cta-game').addEventListener('click', openGame);
   $('#game-start-btn').addEventListener('click', openGame);
@@ -873,7 +933,7 @@
   (function scheduleGlitch() {
     setTimeout(() => {
       const title = $('#title');
-      if (!reduceMotion && state.cfg.effects.glitch !== false && !document.hidden) {
+      if (!reduceMotion && state.cfg.effects.glitch !== false && !document.hidden && !title.isContentEditable) {
         title.classList.add('glitch');
         setTimeout(() => title.classList.remove('glitch'), 400);
       }
@@ -933,6 +993,8 @@
 
     // Artifact: Rechte & Datenbank kommen etwas später an
     await B.init();
+    if (CS.chat) CS.chat.init();
+    if (CS.live) CS.live.init();
     if (B.kind === 'artifact') {
       if (await B.mySignup()) state.signedUp = true;
       renderSignup();

@@ -41,12 +41,13 @@ let body = bodyMatch[1]
   .replace(/\n{3,}/g, '\n\n')
   .trim();
 
+const styles = Array.from(index.matchAll(/<link rel="stylesheet" href="([^"]+)">/g), (m) => m[1]);
+
 const tok = U.templateToken;
 const template = [
   `<title>${tok('TITLE')}</title>`,
   '<meta name="description" content="Coming Soon">',
-  `<style>\n${inlineCss(read('assets/css/site.css'))}\n</style>`,
-  `<style>\n${inlineCss(read('assets/css/studio.css'))}\n</style>`,
+  ...styles.map((href) => `<style>\n${inlineCss(read(href))}\n</style>`),
   body,
   `<script type="application/json" id="cs-config">${tok('CONFIG')}</script>`,
   `<script>window.CS_TEMPLATE=${tok('SELF')};</script>`,
@@ -74,4 +75,4 @@ const out = U.fillTemplate(template, cfg);
 fs.mkdirSync(path.join(ROOT, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, 'dist/coming-soon.html'), out);
 
-console.log(`dist/coming-soon.html  ${(out.length / 1024).toFixed(0)} KB  (${scripts.length} Skripte eingebettet)`);
+console.log(`dist/coming-soon.html  ${(out.length / 1024).toFixed(0)} KB  (${styles.length} Stylesheets, ${scripts.length} Skripte eingebettet)`);

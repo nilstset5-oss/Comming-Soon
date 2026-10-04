@@ -53,6 +53,9 @@
       tilt: true,
       parallax: true,
       soundDefault: false,
+      finalCountdown: true,
+      presence: true,
+      reactions: true,
     },
 
     countdown: { style: 'flip' },
@@ -147,6 +150,17 @@
         { q: L('Wie bleibe ich auf dem Laufenden?', 'How do I stay up to date?'), a: L('Trag deine E-Mail-Adresse ein oder folge uns auf Social Media.', 'Enter your email address or follow us on social media.') },
         { q: L('Gibt es hier wirklich Easter Eggs?', 'Are there really Easter eggs here?'), a: L('Vielleicht. Probier mal ein paar Tasten aus … 😉', 'Maybe. Try pressing a few keys … 😉') },
       ],
+    },
+
+    ai: {
+      enabled: true,
+      showBeforeLaunch: false,
+      persona: 'captain',
+      name: L('{name} KI', '{name} AI'),
+      greeting: L('Hallo! 👋 Ich bin die KI von {name}. Frag mich alles über das Projekt!',
+                  'Hi! 👋 I’m the {name} AI. Ask me anything about the project!'),
+      knowledge: '',
+      missionControl: true,
     },
 
     game: {
@@ -263,6 +277,28 @@
       egg_roll: 'Fassrolle',
       egg_rocket: 'Probestart',
       egg_secret: 'Das geheime Wort',
+      // KI-Chat
+      ai_open: 'Frag {name}',
+      ai_placeholder: 'Deine Frage …',
+      ai_send: 'Senden',
+      ai_stop: 'Stopp',
+      ai_thinking: 'denkt nach …',
+      ai_note: 'Antworten kommen von Claude über dein Claude-Konto. Die KI kann sich irren.',
+      ai_unavailable: 'Die KI ist gerade nicht erreichbar. Versuch es später noch mal.',
+      ai_denied: 'Ohne deine Erlaubnis kann die KI nicht antworten.',
+      ai_rate: 'Kurz durchatmen – zu viele Fragen auf einmal. Gleich noch mal!',
+      ai_refused: 'Dazu kann ich leider nichts sagen.',
+      ai_new: 'Neues Gespräch',
+      ai_close: 'Chat schließen',
+      ai_q1: 'Was ist {name}?',
+      ai_q2: 'Was kann man damit machen?',
+      ai_q3: 'Wie bleibe ich auf dem Laufenden?',
+      // Live
+      here: '{n} gerade hier',
+      react: 'Reagieren',
+      // Spiel-KI
+      g_mc: '🎙️ Was sagt Mission Control?',
+      g_mcThinking: '📡 Mission Control funkt …',
     },
     en: {
       days: 'Days', hours: 'Hours', minutes: 'Minutes', seconds: 'Seconds',
@@ -318,7 +354,36 @@
       egg_roll: 'Barrel roll',
       egg_rocket: 'Test launch',
       egg_secret: 'The secret word',
+      ai_open: 'Ask {name}',
+      ai_placeholder: 'Your question …',
+      ai_send: 'Send',
+      ai_stop: 'Stop',
+      ai_thinking: 'thinking …',
+      ai_note: 'Answers come from Claude using your Claude account. The AI can make mistakes.',
+      ai_unavailable: 'The AI isn’t reachable right now. Please try again later.',
+      ai_denied: 'The AI can’t answer without your permission.',
+      ai_rate: 'Easy there – too many questions at once. Try again in a moment!',
+      ai_refused: 'Sorry, I can’t help with that.',
+      ai_new: 'New chat',
+      ai_close: 'Close chat',
+      ai_q1: 'What is {name}?',
+      ai_q2: 'What can I do with it?',
+      ai_q3: 'How do I stay up to date?',
+      here: '{n} here right now',
+      react: 'React',
+      g_mc: '🎙️ What does Mission Control say?',
+      g_mcThinking: '📡 Mission Control is radioing …',
     },
+  };
+
+  // Persönlichkeiten für den KI-Chat
+  CS.PERSONAS = {
+    captain: { label: 'Weltraum-Kapitän', emoji: '🧑‍🚀', prompt: 'Du bist ein gut gelaunter Weltraum-Kapitän. Du klingst ein wenig nach Funkverkehr („Hier spricht der Kapitän …“, ab und zu ein „Over!“) und benutzt gern Weltraum-Vergleiche, bleibst aber hilfreich und gut verständlich.' },
+    friendly: { label: 'Freundlich', emoji: '😊', prompt: 'Du bist herzlich, hilfsbereit und erklärst Dinge einfach und klar.' },
+    robot: { label: 'Roboter', emoji: '🤖', prompt: 'Du bist ein freundlicher Roboter. Du sprichst präzise und ein bisschen technisch, mit gelegentlichem „Beep-boop“, bleibst aber verständlich.' },
+    pirate: { label: 'Weltraum-Pirat', emoji: '🏴‍☠️', prompt: 'Du bist ein Weltraum-Pirat mit großem Herz. Du sprichst wie ein Pirat („Arr!“, „Landratte“), bist aber ehrlich und hilfsbereit.' },
+    funny: { label: 'Witzig', emoji: '😄', prompt: 'Du bist locker und witzig, machst kleine Wortspiele, kommst aber schnell auf den Punkt.' },
+    pro: { label: 'Professionell', emoji: '💼', prompt: 'Du bist sachlich, höflich und professionell.' },
   };
 
   CS.EGGS = ['konami', 'party', 'ufo', 'warp', 'roll', 'rocket', 'secret'];

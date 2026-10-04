@@ -22,7 +22,9 @@
   let w = 0, h = 0, dpr = 1;
   let state = 'closed'; // closed | ready | playing | paused | over
   let ui = CS.UI.de;
+  let lang = 'de';
   let title = 'Asteroid Run';
+  let missionControl = false;
   let opener = null;
   let colors = { a1: '#7c5cff', a2: '#00d4ff', a3: '#ff4fd8' };
   let raf = 0;
@@ -460,7 +462,7 @@
 
   function showOverlay(nodes, focusEl) {
     overlay.textContent = '';
-    overlay.append(...nodes);
+    overlay.append(...nodes.filter(Boolean));
     overlay.hidden = false;
     if (focusEl) setTimeout(() => focusEl.focus(), 30);
   }
@@ -545,9 +547,43 @@
     const share = btn(ui.g_share, 'btn-ghost', () => shareScore(final));
     const row = el('div', 'cta-row');
     row.append(again, share);
-    nodes.push(name, world, board, row);
+
+    // Mission Control: ein KI-Funkspruch zum Ergebnis (nur auf Knopfdruck)
+    let mc = null;
+    if (missionControl) {
+      const said = el('p', 'mc-said');
+      said.hidden = true;
+      const ask = btn(ui.g_mc, 'btn-ghost mc-btn', () => askMissionControl(final, isBest, ask, said));
+      mc = el('div', 'mc');
+      mc.append(ask, said);
+    }
+    nodes.push(name, world, board, mc, row);
     if (!list.length) board.hidden = true;
     showOverlay(nodes, again);
+  }
+
+  async function askMissionControl(final, isBest, button, out) {
+    const sample = CS.backend && (await CS.backend.ai());
+    if (!sample) { button.remove(); return; }
+    button.disabled = true;
+    out.hidden = false;
+    out.textContent = ui.g_mcThinking;
+    const best = CS.game.best();
+    const prompt = [
+      `Du bist „Mission Control“ im kleinen Weltraum-Arcade-Spiel „${title}“.`,
+      `Ein Spieler hat gerade ${final} Punkte erreicht und ${Math.round(time)} Sekunden überlebt.`,
+      isBest ? 'Das ist ein neuer persönlicher Rekord!' : `Sein Rekord liegt bei ${best} Punkten.`,
+      `Schreib genau EINEN kurzen, witzigen Funkspruch auf ${lang === 'de' ? 'Deutsch' : 'Englisch'} (höchstens 20 Wörter), freundlich, ohne Anführungszeichen.`,
+    ].join(' ');
+    try {
+      const res = await sample(prompt, { modelTier: 'quick', onText: ({ text }) => { out.textContent = '📡 ' + text; } });
+      out.textContent = '📡 ' + res.text.trim();
+      button.remove();
+    } catch (e) {
+      if (e && e.code === 'cancelled') return;
+      out.textContent = e && e.code === 'not_granted' ? '📡 …' : '📡 ' + (CS.UI[lang].ai_unavailable || '');
+      button.disabled = false;
+    }
   }
 
   async function shareScore(n) {
@@ -603,8 +639,10 @@
 
   function open(options = {}) {
     if (state !== 'closed') return;
-    ui = CS.UI[options.lang] || CS.UI.de;
+    lang = options.lang === 'en' ? 'en' : 'de';
+    ui = CS.UI[lang] || CS.UI.de;
     title = options.title || title;
+    missionControl = !!options.missionControl && !!CS.backend && CS.backend.kind === 'artifact';
     opener = document.activeElement;
     modal.hidden = false;
     document.body.style.overflow = 'hidden';

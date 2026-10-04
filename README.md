@@ -16,13 +16,35 @@ Eine animierte Coming-Soon-Seite im Weltraum-Look, die sich zum Starttermin auto
 | Anmeldungen | eingebaute Datenbank mit Liste und CSV-Export | über Formspree o. Ä. |
 | Weltweite Bestenliste | ✅ | – (nur lokal) |
 | KI-Textassistent | ✅ | – |
+| 🤖 KI-Chat für Besucher | ✅ | – |
+| 👀 Live: Raketen-Cursor, „X gerade hier“, Emoji-Reaktionen | ✅ | – |
 | Eigene Adresse, Google-Suche | – | ✅ |
 
 Die Seite erkennt selbst, wo sie läuft, und schaltet die passenden Funktionen ein.
 
 ---
 
+## 🤖 Nach dem Release: KI-Chat
+
+Sobald die Seite live ist, erscheint unten rechts **„Frag {Name}“**. Besucher stellen Fragen, und Claude antwortet live gestreamt. Die KI kennt automatisch alles, was auf der Seite steht: Beschreibung, Features, FAQ, Roadmap und Social-Links. Im Studio unter **KI-Chat** kannst du ihr zusätzliches Wissen mitgeben (Preise, Kontakt …) und eine Persönlichkeit wählen: 🧑‍🚀 Weltraum-Kapitän, 😊 Freundlich, 🤖 Roboter, 🏴‍☠️ Weltraum-Pirat, 😄 Witzig oder 💼 Professionell.
+
+Dazu kommt **Mission Control** im Spiel: Nach jeder Runde gibt es auf Knopfdruck einen KI-Funkspruch zum Ergebnis.
+
+Die Antworten laufen über das Claude-Konto der Besucher (claude.ai fragt einmal um Erlaubnis). Wer kein Claude-Konto hat, sieht den Chat nicht.
+
+## 👀 Live-Gefühl
+
+- Wer gleichzeitig auf der Seite ist, fliegt als **kleine Rakete** mit, und oben steht **„X gerade hier“**.
+- **Emoji-Reaktionen** (🚀 🔥 ❤️ 👏 🤯 🎉) fliegen bei allen live über den Bildschirm.
+- In den **letzten 10 Sekunden** vor dem Start zählt ein riesiger Countdown mit Piepen runter, danach folgt die Launch-Show.
+
+Die Raketen und die Zuschauerzahl sehen alle, die mit ihrem Claude-Konto Zugriff haben (z. B. dein Team). Reaktionen senden können nur Mitwirkende.
+
 ## ✏️ Das Studio
+
+- **Direkt auf der Seite tippen:** Bei offenem Studio einfach auf einen Text der Seite klicken und losschreiben. `Enter` übernimmt, `Esc` bricht ab.
+- **Schnellstart-Assistent:** Name und Emoji, dann das Thema (per KI oder Vorlage), dann das Startdatum, fertig. Er erscheint beim ersten Öffnen automatisch.
+- Aufgeräumte Navigation: Die wichtigsten Bereiche sind sofort sichtbar, alles Weitere liegt unter **„⋯ Mehr“**.
 
 - **Übersicht:** Countdown, Anzahl der Anmeldungen und Spieler, Einrichtungs-Checkliste
 - **Vorlagen & KI:** 6 Vorlagen (App, Spiel, Shop, Event, Creator, Weltraum) oder Texte auf Deutsch und Englisch von Claude schreiben lassen

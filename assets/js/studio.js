@@ -24,6 +24,9 @@
     reopen: 'cs-studio-reopen',
     published: 'cs-studio-published',
     pubOpts: 'cs-admin-publish-opts',
+    wizard: 'cs-studio-wizard-done',
+    all: 'cs-studio-show-all',
+    tip: 'cs-studio-inline-tip',
   };
   const DEFAULT_HASH = CS.DEFAULT_CONFIG.admin.passHash;
   const DEFAULT_GITHUB_URL = CS.DEFAULT_CONFIG.social[0].url;
@@ -186,6 +189,82 @@
     $('#st-redo').disabled = !S.future.length;
     $$('.st-publish').forEach((b) => b.classList.toggle('pulse', dirty));
     $('#st-sub').textContent = S.draft.brand.name || '';
+  }
+
+  // ---------------------------------------------------------
+  //  Direkt auf der Seite bearbeiten (Text anklicken & tippen)
+  // ---------------------------------------------------------
+  let inline = null;
+
+  function setQuiet(path, value) {
+    snapshotBefore();
+    U.set(S.draft, path, value);
+    S.lastState = JSON.stringify(S.draft);
+    ls.set(KEY.draft, JSON.stringify({ base: S.publishedText, draft: S.draft }));
+    updateStatus();
+  }
+
+  function startInline(node) {
+    if (inline) inline.blur();
+    const path = node.dataset.edit;
+    const i18n = node.dataset.editI18n !== '0';
+    const multi = node.dataset.editMulti === '1';
+    const full = i18n ? path + '.' + CS.site.getLang() : path;
+    const current = U.get(S.draft, full);
+    const original = current == null ? '' : String(current);
+    node.textContent = original;
+    node.setAttribute('contenteditable', 'plaintext-only');
+    if (node.contentEditable !== 'plaintext-only') node.setAttribute('contenteditable', 'true');
+    node.setAttribute('spellcheck', 'true');
+    node.classList.add('editing');
+    node.focus();
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    let cancel = false;
+    const read = () => {
+      let v = node.innerText.replace(/\u00a0/g, ' ').replace(/\n$/, '');
+      if (!multi) v = v.replace(/\s*\n\s*/g, ' ');
+      return v;
+    };
+    const onInput = () => setQuiet(full, read());
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel = true; node.blur(); }
+      else if (e.key === 'Enter' && (!multi || e.ctrlKey || e.metaKey)) { e.preventDefault(); node.blur(); }
+    };
+    const onBlur = () => {
+      node.removeEventListener('input', onInput);
+      node.removeEventListener('keydown', onKey);
+      node.removeEventListener('blur', onBlur);
+      node.removeAttribute('contenteditable');
+      node.classList.remove('editing');
+      inline = null;
+      if (cancel) setQuiet(full, original);
+      CS.site.applyConfig(S.draft);
+      if (S.isOpen) showPanel(S.panel, { keepScroll: true });
+    };
+    node.addEventListener('input', onInput);
+    node.addEventListener('keydown', onKey);
+    node.addEventListener('blur', onBlur);
+    inline = node;
+    if (!ls.get(KEY.tip)) {
+      ls.set(KEY.tip, '1');
+      toast(multi ? '✏️ Schreib los – Strg+Enter oder daneben klicken übernimmt, Esc bricht ab.' : '✏️ Schreib los – Enter übernimmt, Esc bricht ab.', 4500);
+    }
+  }
+
+  function onPageClick(e) {
+    if (!S.isOpen || !e.target.closest) return;
+    const node = e.target.closest('[data-edit]');
+    if (!node || node.closest('#studio')) return;
+    // Links, Aufklapper & Co. sollen beim Bearbeiten nicht reagieren
+    e.preventDefault();
+    if (node.isContentEditable) return;
+    e.stopPropagation();
+    startInline(node);
   }
 
   // ---------------------------------------------------------
@@ -464,18 +543,20 @@
 
   const PANELS = [
     { id: 'overview', icon: '🏠', title: 'Übersicht', desc: 'Alles Wichtige auf einen Blick.', render: panelOverview },
+    { id: 'wizard', icon: '🧙', title: 'Schnellstart', desc: 'In drei Schritten zu deiner Seite.', render: panelWizard },
     { id: 'templates', icon: '✨', title: 'Vorlagen & KI', desc: 'In Sekunden zu passenden Texten und Farben.', render: panelTemplates },
+    { id: 'content', icon: '✏️', title: 'Texte & Marke', desc: 'Tipp: Du kannst auch direkt auf der Seite auf einen Text klicken.', render: panelContent },
+    { id: 'design', icon: '🎨', title: 'Design', desc: 'Farben, Sterne, Rakete, Sound und Live-Effekte.', render: panelDesign },
     { id: 'schedule', icon: '🗓️', title: 'Zeitplan', desc: 'Wann deine Seite live geht.', render: panelSchedule },
-    { id: 'content', icon: '✏️', title: 'Texte & Marke', desc: 'Name, Logo und alle Texte – Deutsch und Englisch.', render: panelContent },
-    { id: 'design', icon: '🎨', title: 'Design', desc: 'Farben, Sterne, Planeten, Rakete und Sound.', render: panelDesign },
-    { id: 'sections', icon: '🧩', title: 'Bereiche', desc: 'Welche Abschnitte es gibt und was drinsteht.', render: panelSections },
-    { id: 'roadmap', icon: '🗺️', title: 'Roadmap & FAQ', desc: 'Zeitplan und häufige Fragen.', render: panelRoadmap },
+    { id: 'ai', icon: '🤖', title: 'KI-Chat', desc: 'Nach dem Start beantwortet eine KI die Fragen deiner Besucher.', render: panelAi },
     { id: 'signups', icon: '📧', title: 'Anmel\u00addungen', desc: 'Wer beim Start Bescheid bekommen will.', render: panelSignups },
-    { id: 'social', icon: '🔗', title: 'Social Media', desc: 'Links zu deinen Kanälen.', render: panelSocial },
-    { id: 'fun', icon: '🎮', title: 'Spiel & Eggs', desc: 'Mini-Spiel, Bestenliste und versteckte Überraschungen.', render: panelFun },
-    { id: 'seo', icon: '📣', title: 'Teilen & SEO', desc: 'Dein Link, Vorschaubild und Statistik.', render: panelSeo },
-    { id: 'security', icon: '🔒', title: 'Zugang', desc: 'Wer dieses Studio benutzen darf.', render: panelSecurity },
-    { id: 'publish', icon: '☁️', title: 'Veröffentlichen', desc: 'Online stellen, sichern, wiederherstellen.', render: panelPublish },
+    { id: 'publish', icon: '☁️', title: 'Veröffent\u00adlichen', desc: 'Online stellen, sichern, wiederherstellen.', render: panelPublish },
+    { id: 'sections', adv: true, icon: '🧩', title: 'Bereiche', desc: 'Welche Abschnitte es gibt und was drinsteht.', render: panelSections },
+    { id: 'roadmap', adv: true, icon: '🗺️', title: 'Roadmap & FAQ', desc: 'Zeitplan und häufige Fragen.', render: panelRoadmap },
+    { id: 'social', adv: true, icon: '🔗', title: 'Social Media', desc: 'Links zu deinen Kanälen.', render: panelSocial },
+    { id: 'fun', adv: true, icon: '🎮', title: 'Spiel & Eggs', desc: 'Mini-Spiel, Bestenliste und versteckte Überraschungen.', render: panelFun },
+    { id: 'seo', adv: true, icon: '📣', title: 'Teilen & SEO', desc: 'Dein Link, Vorschaubild und Statistik.', render: panelSeo },
+    { id: 'security', adv: true, icon: '🔒', title: 'Zugang', desc: 'Wer dieses Studio benutzen darf.', render: panelSecurity },
   ];
 
   // ---------- Übersicht ----------
@@ -518,10 +599,11 @@
           statBox(players, 'Spieler in der Bestenliste'))),
       group('Schnellstart',
         h('div', { class: 'st-quick' },
-          quickTile('✨', 'Vorlage oder KI', 'Texte & Farben passend zu deinem Projekt', () => showPanel('templates')),
+          quickTile('🧙', 'Schnellstart', 'Name, Thema, Startdatum – in 3 Schritten', () => { WIZ.step = 1; showPanel('wizard'); }),
           quickTile('🚀', 'Launch-Show testen', 'So sieht der große Moment aus', launchTest),
-          quickTile('🎨', 'Farben ändern', '7 Themen oder eigene Farben', () => showPanel('design')),
-          quickTile('📧', 'Anmeldungen', ART ? 'Liste ansehen & exportieren' : 'E-Mail-Liste einrichten', () => showPanel('signups')))),
+          quickTile('🤖', 'KI-Chat', 'Persönlichkeit & Wissen deiner KI', () => showPanel('ai')),
+          quickTile('📧', 'Anmeldungen', ART ? 'Liste ansehen & exportieren' : 'E-Mail-Liste einrichten', () => showPanel('signups'))),
+        info('✏️ <b>Tipp:</b> Klick direkt auf einen Text auf der Seite und schreib los. <kbd>Enter</kbd> übernimmt, <kbd>Esc</kbd> bricht ab.')),
       group(`Einrichtung · ${doneCount}/${CHECKS.length}`,
         h('div', { class: 'st-progress' }, h('div', { style: `width:${Math.round((doneCount / CHECKS.length) * 100)}%` })),
         checklist),
@@ -536,10 +618,11 @@
   }
 
   // ---------- Vorlagen & KI ----------
-  function applyPreset(key) {
+  function applyPreset(key, { keepEmoji = false } = {}) {
     const p = CS.PRESETS[key];
     if (!p) return;
     const next = U.merge(S.draft, p.patch);
+    if (keepEmoji) next.brand.logoEmoji = S.draft.brand.logoEmoji;
     const th = CS.THEMES[p.theme];
     if (th) { const { label, ...colors } = th; next.theme = Object.assign({ preset: p.theme }, colors); }
     replaceDraft(next, { rerender: false });
@@ -594,9 +677,9 @@
   }
 
   async function runAi(desc, tone, ui) {
-    if (desc.length < 8) { ui.status.textContent = 'Beschreib dein Projekt in mindestens einem Satz.'; return; }
+    if (desc.length < 8) { ui.status.textContent = 'Beschreib dein Projekt in mindestens einem Satz.'; return false; }
     const sample = await B.ai();
-    if (!sample) { ui.status.textContent = 'Die KI ist hier nicht verfügbar.'; return; }
+    if (!sample) { ui.status.textContent = 'Die KI ist hier nicht verfügbar.'; return false; }
     const name = S.draft.brand.name || 'Projekt';
     const prompt = [
       'Du schreibst die Texte für eine Coming-Soon-Webseite, die sich zum Starttermin in eine Live-Seite verwandelt.',
@@ -630,6 +713,7 @@
       applyAi(data);
       ui.status.textContent = '✓ Fertig! Schau dir die Seite an – mit ↶ kannst du alles zurücknehmen.';
       toast('✨ Neue Texte sind drin – mit ↶ kannst du sie zurücknehmen.', 4000);
+      return true;
     } catch (e) {
       const code = e && e.code;
       const msg = {
@@ -641,6 +725,7 @@
         sampling_disabled: 'Die KI ist für dein Konto nicht verfügbar.',
       }[code] || 'Das hat nicht geklappt. Versuch es noch mal.';
       ui.status.textContent = msg;
+      return false;
     } finally {
       ui.go.disabled = false;
       ui.stop.hidden = true;
@@ -652,7 +737,10 @@
     if (!data || typeof data !== 'object') throw { code: 'invalid_json' };
     const next = U.clone(S.draft);
     const setI = (path, v, max) => { const c = cleanI18n(v, max); if (c && c.de) U.set(next, path, c); };
-    if (typeof data.logoEmoji === 'string' && data.logoEmoji.trim()) { next.brand.logoType = 'emoji'; next.brand.logoEmoji = data.logoEmoji.trim().slice(0, 8); }
+    if (typeof data.logoEmoji === 'string' && data.logoEmoji.trim() && !(S.panel === 'wizard' && S.draft.brand.logoEmoji !== CS.DEFAULT_CONFIG.brand.logoEmoji)) {
+      next.brand.logoType = 'emoji';
+      next.brand.logoEmoji = data.logoEmoji.trim().slice(0, 8);
+    }
     if (CS.THEMES[data.theme]) { const { label, ...colors } = CS.THEMES[data.theme]; next.theme = Object.assign({ preset: data.theme }, colors); }
     if (data.soon) { setI('soon.badge', data.soon.badge, 40); setI('soon.text', data.soon.text, 400); }
     if (data.live) {
@@ -787,7 +875,135 @@
         fieldToggle('effects.parallax', 'Sterne folgen der Maus'),
         fieldToggle('effects.tilt', 'Handy-Neigung'),
         fieldToggle('effects.soundDefault', 'Sound automatisch an', 'Startet beim ersten Klick. Besucher können ihn ausschalten.')),
+      group('Start-Moment',
+        fieldToggle('effects.finalCountdown', 'Großer Countdown', 'Die letzten 10 Sekunden erscheinen riesig auf dem Bildschirm – mit Piepen.')),
+      group('Live – wer gerade zuschaut',
+        fieldToggle('effects.presence', 'Andere Besucher als Raketen zeigen', 'Jeder Mauszeiger wird zur kleinen Rakete, dazu „X gerade hier“.'),
+        fieldToggle('effects.reactions', 'Emoji-Reaktionen', '🚀 🔥 ❤️ 👏 – fliegen live bei allen über den Bildschirm.'),
+        help(ART ? 'Funktioniert für alle, die mit ihrem Claude-Konto Zugriff auf die Seite haben (z. B. dein Team).' : 'Nur verfügbar, wenn die Seite als Artifact auf claude.ai läuft.')),
     ];
+  }
+
+  // ---------- KI-Chat ----------
+  function panelAi() {
+    const d = S.draft;
+    const personas = h('div', { class: 'st-personas' }, Object.entries(CS.PERSONAS).map(([key, p]) =>
+      h('button', { class: 'st-persona', type: 'button', 'aria-pressed': String(d.ai.persona === key), on: { click: () => set('ai.persona', key, { rerender: true }) } },
+        h('span', { class: 'st-persona-e', text: p.emoji }), h('b', { text: p.label }))));
+    return [
+      ART ? null : info('Der KI-Chat läuft, wenn deine Seite als Artifact auf claude.ai veröffentlicht ist.', 'warn'),
+      group('KI-Chat',
+        fieldToggle('ai.enabled', 'KI-Chat anzeigen', 'Unten rechts: Besucher fragen, Claude antwortet live.'),
+        fieldToggle('ai.showBeforeLaunch', 'Schon vor dem Start zeigen', 'Aus = erst nach dem Release (im Studio siehst du ihn immer).'),
+        h('button', { class: 'st-btn', type: 'button', text: '💬 Chat ausprobieren', on: { click: () => {
+          if (CS.chat && CS.chat.isAvailable()) { if (window.matchMedia('(max-width: 760px)').matches) collapse(true); CS.chat.open(); }
+          else toast('Der Chat ist in dieser Ansicht nicht verfügbar.');
+        } } })),
+      group('Persönlichkeit', personas),
+      group('Auftritt',
+        fieldI18n('ai.name', 'Name', { help: '<code>{name}</code> = Projektname' }),
+        fieldI18n('ai.greeting', 'Begrüßung', { multiline: true })),
+      group('Wissen',
+        fieldText('ai.knowledge', 'Was soll die KI noch wissen?', {
+          multiline: true,
+          placeholder: 'z. B. Preise, Kontakt, Öffnungszeiten, Details zum Produkt …',
+          help: 'Alle Texte deiner Seite (Features, FAQ, Roadmap …) kennt die KI schon. Schreib hier nichts Geheimes hinein – Besucher können danach fragen.',
+        })),
+      group('Mission Control',
+        fieldToggle('ai.missionControl', 'KI-Funkspruch im Spiel', 'Nach jeder Runde kann man sich von „Mission Control“ einen Kommentar holen.')),
+      info('Die Antworten laufen über das Claude-Konto der Besucher – beim ersten Mal fragt claude.ai um Erlaubnis. Wer kein Claude-Konto hat, sieht den Chat nicht.'),
+    ];
+  }
+
+  // ---------- Schnellstart-Assistent ----------
+  const WIZ = { step: 1, when: null };
+
+  function panelWizard() {
+    const total = 4;
+    const go = (n) => { WIZ.step = n; showPanel('wizard'); };
+    const dots = h('div', { class: 'st-wiz-dots', 'aria-label': `Schritt ${WIZ.step} von ${total}` },
+      Array.from({ length: total }, (_, i) => h('span', { class: i + 1 === WIZ.step ? 'on' : i + 1 < WIZ.step ? 'done' : '' })));
+    const navRow = (back, nextLabel, onNext) => h('div', { class: 'st-row between' },
+      back ? h('button', { class: 'st-btn', type: 'button', text: '← Zurück', on: { click: () => go(WIZ.step - 1) } }) : h('span'),
+      nextLabel ? h('button', { class: 'st-btn primary', type: 'button', text: nextLabel, on: { click: onNext } }) : null);
+    const q = (text, sub) => [h('h3', { class: 'st-wiz-q', text }), sub ? h('p', { class: 'st-help', text: sub }) : null];
+
+    if (WIZ.step === 1) {
+      return [group(null, dots,
+        ...q('Wie heißt dein Projekt?', 'Der Name steht oben auf der Seite und im Tab.'),
+        fieldText('brand.name', 'Name', { max: 40 }),
+        fieldEmoji('brand.logoEmoji', 'Wähl ein Logo-Emoji'),
+        navRow(false, 'Weiter →', () => {
+          if (S.draft.brand.logoType !== 'emoji') set('brand.logoType', 'emoji');
+          go(2);
+        }))];
+    }
+
+    if (WIZ.step === 2) {
+      const parts = [dots, ...q('Worum geht es?', 'Die KI schreibt passende Texte – oder du nimmst eine Vorlage.')];
+      if (ART) {
+        const desc = h('textarea', { id: 'st-wiz-desc', placeholder: 'z. B. „Ein Café mit Brettspielen mitten in Köln.“', maxLength: 600 });
+        desc.value = ss.get('cs-ai-desc') || '';
+        desc.addEventListener('input', () => ss.set('cs-ai-desc', desc.value));
+        const status = h('p', { class: 'st-help', role: 'status' });
+        const goBtn = h('button', { class: 'st-btn primary wide', type: 'button', text: '✨ Mit KI schreiben lassen' });
+        const stop = h('button', { class: 'st-btn small', type: 'button', text: 'Stopp', hidden: true, on: { click: () => aiCtl && aiCtl.abort() } });
+        goBtn.addEventListener('click', async () => { if (await runAi(desc.value.trim(), 'locker', { go: goBtn, stop, status })) go(3); });
+        parts.push(h('label', { class: 'st-field', for: 'st-wiz-desc' }, h('span', { text: 'Beschreib dein Projekt in 1–3 Sätzen' }), desc), goBtn, h('div', { class: 'st-row' }, status, stop),
+          h('div', { class: 'st-or', text: 'oder' }));
+      }
+      parts.push(h('div', { class: 'st-presets' }, Object.entries(CS.PRESETS).map(([key, p]) => {
+        const th = CS.THEMES[p.theme];
+        return h('button', { class: 'st-preset', type: 'button', on: { click: () => { applyPreset(key, { keepEmoji: true }); go(3); } } },
+          h('span', { class: 'st-preset-swatch', style: `background:linear-gradient(135deg, ${th.accent2}, ${th.accent1} 55%, ${th.accent3})` }, h('span', { text: p.icon })),
+          h('b', { text: p.label }));
+      })), navRow(true, 'Überspringen →', () => go(3)));
+      return [group(null, ...parts)];
+    }
+
+    if (WIZ.step === 3) {
+      const opts = [
+        ['week', '🚀', 'In 1 Woche', () => Date.now() + 7 * 86400000],
+        ['month', '📅', 'In 30 Tagen', () => Date.now() + 30 * 86400000],
+        ['quarter', '🗓️', 'In 3 Monaten', () => Date.now() + 91 * 86400000],
+        ['now', '⚡', 'Sofort live', null],
+      ];
+      const pick = (key, fn) => {
+        WIZ.when = key;
+        snapshotBefore();
+        if (fn) {
+          const t = new Date(fn());
+          t.setMinutes(0, 0, 0);
+          U.set(S.draft, 'mode', 'auto');
+          U.set(S.draft, 'launchDate', toLocalInput(t.getTime(), S.draft.timeZone));
+        } else {
+          U.set(S.draft, 'mode', 'live');
+        }
+        commit({ rerender: true });
+      };
+      return [group(null, dots,
+        ...q('Wann geht es los?', 'Bis dahin läuft der Countdown – danach wird die Seite automatisch live.'),
+        h('div', { class: 'st-modes' }, opts.map(([key, icon, label, fn]) =>
+          h('button', { class: 'st-mode', type: 'button', 'aria-pressed': String(WIZ.when === key), on: { click: () => pick(key, fn) } },
+            h('span', { class: 'st-mode-i', text: icon }), h('b', { text: label })))),
+        S.draft.mode !== 'live' ? fieldText('launchDate', 'Oder genau festlegen', { type: 'datetime-local' }) : null,
+        navRow(true, 'Weiter →', () => go(4)))];
+    }
+
+    ls.set(KEY.wizard, '1');
+    const t = U.launchTime(S.draft);
+    const when = S.draft.mode === 'live' ? 'Sofort live' : Number.isFinite(t)
+      ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'full', timeStyle: 'short', timeZone: S.draft.timeZone }).format(new Date(t)) : '–';
+    return [group(null, dots,
+      h('div', { class: 'st-wiz-done' },
+        h('span', { class: 'st-wiz-big', text: S.draft.brand.logoEmoji || '🚀' }),
+        h('h3', { class: 'st-wiz-q', text: `${S.draft.brand.name || 'Deine Seite'} ist bereit! 🎉` }),
+        h('p', { class: 'st-help', text: 'Start: ' + when })),
+      h('button', { class: 'st-btn primary wide st-publish', type: 'button', text: '☁️ Jetzt veröffentlichen', on: { click: publish } }),
+      h('div', { class: 'st-row between' },
+        h('button', { class: 'st-btn', type: 'button', text: '← Zurück', on: { click: () => go(3) } }),
+        h('button', { class: 'st-btn', type: 'button', text: 'Noch anpassen', on: { click: () => showPanel('overview') } })),
+      info('✏️ Tipp: Klick direkt auf Texte auf der Seite, um sie zu ändern.'))];
   }
 
   // ---------- Bereiche ----------
@@ -1355,11 +1571,11 @@
         seg('st-seg-lang', 'Sprache', [['de', 'DE'], ['en', 'EN']], (v) => { CS.site.setLang(v); syncSegs(); }),
         h('button', { class: 'st-btn small', type: 'button', text: '🚀 Launch testen', on: { click: launchTest } })),
       h('div', { class: 'st-body' },
-        h('nav', { class: 'st-nav', id: 'st-nav', 'aria-label': 'Bereiche' }, PANELS.map((p) =>
-          h('button', { type: 'button', 'data-panel': p.id, title: p.title, on: { click: () => showPanel(p.id) } },
-            h('span', { class: 'st-nav-i', text: p.icon }), h('span', { class: 'st-nav-t', text: p.title })))),
+        h('nav', { class: 'st-nav', id: 'st-nav', 'aria-label': 'Bereiche' }),
         h('div', { class: 'st-editor', id: 'st-editor' })));
     document.body.append(root);
+    renderNav();
+    document.addEventListener('click', onPageClick, true);
 
     window.addEventListener('keydown', (e) => {
       if (!S.isOpen) return;
@@ -1378,6 +1594,28 @@
 
   function runTickers() { S.tickers.forEach((fn) => fn()); }
 
+  function renderNav() {
+    const nav = $('#st-nav');
+    const all = ls.get(KEY.all) === '1' || !!(PANELS.find((p) => p.id === S.panel) || {}).adv;
+    nav.textContent = '';
+    for (const p of PANELS) {
+      if (p.id === 'wizard' || (p.adv && !all)) continue;
+      nav.append(h('button', { type: 'button', 'data-panel': p.id, title: p.title.replace(/\u00ad/g, ''), on: { click: () => showPanel(p.id) } },
+        h('span', { class: 'st-nav-i', text: p.icon }), h('span', { class: 'st-nav-t', text: p.title })));
+    }
+    nav.append(h('button', { type: 'button', class: 'st-nav-more', title: all ? 'Weniger' : 'Mehr Einstellungen',
+      on: { click: () => { ls.set(KEY.all, all ? '0' : '1'); renderNav(); if (all && (PANELS.find((p) => p.id === S.panel) || {}).adv) showPanel('overview'); else markNav(); } } },
+      h('span', { class: 'st-nav-i', text: all ? '▴' : '⋯' }), h('span', { class: 'st-nav-t', text: all ? 'Weniger' : 'Mehr' })));
+    markNav();
+  }
+
+  function markNav(scroll) {
+    $$('#st-nav button').forEach((b) => b.removeAttribute('aria-current'));
+    const id = S.panel === 'wizard' ? 'overview' : S.panel;
+    const navBtn = $(`#st-nav button[data-panel="${id}"]`);
+    if (navBtn) { navBtn.setAttribute('aria-current', 'page'); if (scroll) navBtn.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+  }
+
   function showPanel(id, { keepScroll = false } = {}) {
     const panel = PANELS.find((p) => p.id === id) || PANELS[0];
     const editor = $('#st-editor');
@@ -1388,9 +1626,8 @@
     S.tickers = [];
     S.listeners = [];
     ls.set(KEY.panel, panel.id);
-    $$('#st-nav button').forEach((b) => b.toggleAttribute('aria-current', b.dataset.panel === panel.id));
-    const navBtn = $(`#st-nav button[data-panel="${panel.id}"]`);
-    if (navBtn) { navBtn.setAttribute('aria-current', 'page'); if (!keepScroll) navBtn.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+    if (panel.adv && !$(`#st-nav button[data-panel="${panel.id}"]`)) renderNav();
+    markNav(!keepScroll);
 
     editor.textContent = '';
     editor.append(h('div', { class: 'st-panel-head' }, h('h2', null, h('span', { text: panel.icon }), ' ', panel.title), h('p', { text: panel.desc })));
@@ -1442,13 +1679,16 @@
     S.previewMode = '';
     syncSegs();
     updateStatus();
-    showPanel(panel || ls.get(KEY.panel) || 'overview');
+    const fresh = !ls.get(KEY.wizard) && S.draft.brand.name === CS.DEFAULT_CONFIG.brand.name;
+    if (fresh && !panel) WIZ.step = 1;
+    showPanel(panel || (fresh ? 'wizard' : ls.get(KEY.panel) || 'overview'));
     watchData();
     if (restored) toast('💾 Dein Entwurf vom letzten Mal ist wieder da.', 3500);
   }
 
   function close() {
     if (!S.isOpen) return;
+    if (inline) inline.blur();
     S.isOpen = false;
     $('#studio').hidden = true;
     collapse(false);

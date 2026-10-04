@@ -134,6 +134,8 @@
 
   const SFX = {
     click: () => tone(1400, 0.05, { type: 'triangle', gain: 0.06 }),
+    beep: () => tone(660, 0.16, { type: 'square', gain: 0.05 }),
+    beepHigh: () => tone(990, 0.22, { type: 'square', gain: 0.07 }),
     shoot: () => tone(1800, 0.06, { type: 'square', gain: 0.012, slideTo: 900 }),
     coin: () => { tone(988, 0.08, { type: 'square', gain: 0.05 }); tone(1319, 0.18, { type: 'square', gain: 0.05, delay: 0.07 }); },
     boom: () => noiseBurst(0.45, { from: 1600, to: 80, gain: 0.35 }),
