@@ -1,0 +1,62 @@
+name: ESP32 Studio
+
+on:
+  push:
+    paths:
+      - "esp32-studio/**"
+      - ".github/workflows/esp32-studio.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware:
+    name: Firmware bauen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: ESP32-Boardpaket zwischenspeichern
+        uses: actions/cache@v4
+        with:
+          path: ~/.arduino15
+          key: arduino15-esp32-v1
+
+      - name: ESP32-Boardpaket installieren
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli core list
+
+      - name: Kompilieren
+        run: |
+          set -e
+          mkdir -p out
+          for target in \
+            "esp32|esp32:esp32:esp32" \
+            "esp32s2-usb|esp32:esp32:esp32s2:CDCOnBoot=cdc" \
+            "esp32s3|esp32:esp32:esp32s3" \
+            "esp32s3-usb|esp32:esp32:esp32s3:CDCOnBoot=cdc" \
+            "esp32c3|esp32:esp32:esp32c3" \
+            "esp32c3-usb|esp32:esp32:esp32c3:CDCOnBoot=cdc" \
+            "esp32c6-usb|esp32:esp32:esp32c6:CDCOnBoot=cdc"
+          do
+            name="${target%%|*}"
+            fqbn="${target##*|}"
+            echo "::group::$name ($fqbn)"
+            arduino-cli compile --fqbn "$fqbn" --warnings default \
+              --output-dir "build/$name" esp32-studio/firmware/ESP32Studio
+            cp "build/$name/ESP32Studio.ino.merged.bin" "out/esp32studio-$name.bin"
+            echo "::endgroup::"
+          done
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: esp32studio-firmware
+          path: out/*.bin
