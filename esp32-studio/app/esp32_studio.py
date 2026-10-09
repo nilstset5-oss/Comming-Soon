@@ -467,10 +467,10 @@ class LineChart(tk.Canvas):
                              anchor="ne",
                              fill=t["fg"], font=(self.app.ui_font, 11, "bold"))
         top, bottom, left, right = 26, h - 6, 44, w - 6
-        for i in range(4):
-            y = top + (bottom - top) * i / 3
-            self.create_line(left, y, right, y, fill=t["grid"])
         if len(self.data) < 2:
+            for i in range(4):
+                y = top + (bottom - top) * i / 3
+                self.create_line(left, y, right, y, fill=t["grid"])
             self.create_text((left + right) / 2, (top + bottom) / 2, text="Warte auf Daten …", fill=t["muted"],
                              font=f_small)
             return
@@ -481,11 +481,17 @@ class LineChart(tk.Canvas):
             pad = (hi - lo) * 0.15
             lo, hi = lo - pad, hi + pad
         span = hi - lo
-        axis_fmt = "{:.0f}" if span >= 20 else "{:.1f}" if span >= 2 else "{:.2f}"
-        for i, val in enumerate((hi, (hi + lo) / 2, lo)):
+        axis_fmt = "{:.0f}" if span >= 10 else "{:.1f}" if span >= 1 else "{:.2f}"
+        labels = [axis_fmt.format(v).replace(".", ",") for v in (hi, (hi + lo) / 2, lo)]
+        if not hasattr(self, "_font"):
+            self._font = tkfont.Font(family=self.app.ui_font, size=9)
+        left = max(self._font.measure(x) for x in labels) + 14
+        for i in range(4):
+            y = top + (bottom - top) * i / 3
+            self.create_line(left, y, right, y, fill=t["grid"])
+        for i, text in enumerate(labels):
             y = top + (bottom - top) * i / 2
-            self.create_text(left - 6, y, text=axis_fmt.format(val).replace(".", ","), anchor="e", fill=t["muted"],
-                             font=f_small)
+            self.create_text(left - 6, y, text=text, anchor="e", fill=t["muted"], font=f_small)
         n = self.data.maxlen or len(self.data)
         step = (right - left) / max(1, n - 1)
         x0 = right - step * (len(self.data) - 1)
