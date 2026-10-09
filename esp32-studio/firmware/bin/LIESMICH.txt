@@ -1,0 +1,9 @@
+Hier kommen die fertigen Firmware-Dateien hin (esp32studio-*.bin).
+
+So bekommst du sie:
+1. Auf GitHub im Repository auf "Actions" klicken.
+2. Den neuesten Lauf von "ESP32 Studio" oeffnen.
+3. Unten bei "Artifacts" die Datei "esp32studio-firmware" herunterladen.
+4. Das ZIP entpacken und die .bin-Dateien in diesen Ordner legen.
+
+Die App zeigt sie danach unter "Firmware & Flashen" an.

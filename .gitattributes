@@ -1,0 +1,2 @@
+esp32-studio/*.bat text eol=crlf
+esp32-studio/*.sh text eol=lf

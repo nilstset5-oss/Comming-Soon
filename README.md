@@ -157,4 +157,10 @@ python3 -m http.server 8000
 
 ---
 
+## 🔌 Außerdem im Repo: ESP32 Studio
+
+Eine PC-App, um einen ESP32 per USB zu steuern (Neustart, Infos, WLAN, Hotspot, GPIO, Flashen …), samt passender Firmware. Alles dazu steht in [`esp32-studio/README.md`](esp32-studio/README.md).
+
+---
+
 Marken-Icons: [Simple Icons](https://simpleicons.org) (CC0). Die Markenrechte liegen bei den jeweiligen Inhabern.

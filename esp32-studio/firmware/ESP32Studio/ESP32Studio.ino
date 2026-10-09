@@ -1080,6 +1080,10 @@ void cmdApClients(Ctx& c) {
 }
 
 void cmdWebStart(Ctx& c) {
+  if (WiFi.getMode() == WIFI_MODE_NULL) {
+    replyErr(c.id, "Erst mit einem WLAN verbinden oder den Hotspot starten");
+    return;
+  }
   startWeb();
   cfg.webAuto = c.flag(1, true);
   saveSettings();
@@ -1564,7 +1568,7 @@ void setup() {
     String err;
     startAp(err);
   }
-  if (cfg.webAuto) startWeb();
+  if (cfg.webAuto && WiFi.getMode() != WIFI_MODE_NULL) startWeb();
 
   Serial.println();
   Serial.println("==============================");
