@@ -72,8 +72,12 @@ Klappt das Flashen nicht, hilft fast immer: **BOOT**-Taste gedrückt halten, kur
 
 **Verbindung**
 - Findet ESP32-Boards automatisch (CP210x, CH340, CH9102, FTDI, nativer USB) und verbindet sich beim Einstecken
-- Verbindet sich nach einem Neustart oder Wackelkontakt von selbst wieder
-- Startet den ESP32 nicht ungewollt neu, wenn du verbindest
+- Ist kein ESP32 zu sehen, öffnet sich eine Hilfe mit Treiber-Links. Unter Windows erkennt die App sogar, wenn ein USB-Chip ohne Treiber steckt
+- Antwortet der ESP32 nicht, versucht die App es mehrmals, stellt bei Zeichensalat auf 115200 Baud um und startet den ESP32 notfalls einmal neu
+- Klappt es trotzdem nicht, sagt sie, woran es liegt: falscher Port, anderes Programm, falsche Baudrate, Bootloader-Modus oder Port belegt. Die passende Lösung gibt es als Knopf, z. B. **Studio-Firmware installieren** mit einem Klick
+- Port belegt (z. B. von der Arduino IDE)? Die App wartet und verbindet sich, sobald er frei ist
+- Verbindet sich nach einem Neustart oder Wackelkontakt von selbst wieder, auch wenn der ESP32 danach einen anderen COM-Port bekommt
+- Nativer USB (ESP32-S2/S3/C3/C6) wird mit den richtigen Steuerleitungen geöffnet. Boards mit USB-UART-Chip starten beim Verbinden nicht ungewollt neu
 
 **Übersicht**
 - Name, Chip, Kerne, Takt, MAC, Flash, PSRAM, ESP-IDF- und Arduino-Version, Grund des letzten Neustarts
@@ -175,7 +179,9 @@ void cmdHallo(Ctx& c) {
 |---|---|
 | Kein Port in der Liste | USB-Kabel mit Datenleitung nehmen (viele Ladekabel können nur Strom). Treiber installieren: [CP210x](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers) oder [CH340](https://www.wch-ic.com/downloads/CH341SER_EXE.html). |
 | „Port wird schon benutzt“ | Arduino IDE (Serieller Monitor) oder andere Programme schließen. |
-| „Keine Studio-Firmware gefunden“ | Firmware installieren (siehe oben). Der Monitor funktioniert trotzdem. |
+| „Keine Studio-Firmware gefunden“ / „anderes Programm“ | Im gelben Hinweis auf **Studio-Firmware installieren** klicken. Der Monitor funktioniert trotzdem. |
+| „Von COMx kommt gar nichts“ | Falscher Port (z. B. COM1) – im gelben Hinweis **Anderen Port probieren** klicken – oder einmal EN/RST am Board drücken. |
+| „Warte auf COMx … (belegt)“ | Ein anderes Programm hat den Port offen (Arduino IDE, PuTTY …). Schließen, dann verbindet die App von selbst. |
 | Flashen schlägt fehl | BOOT gedrückt halten, kurz EN/RST drücken, BOOT loslassen, nochmal. Tempo auf 115200 stellen. |
 | ESP32-S3/C3 zeigt nichts an | Die `-usb`-Firmware nehmen bzw. „USB CDC On Boot: Enabled“. |
 | Kein QR-Code | `pip install segno` |

@@ -29,7 +29,7 @@ import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import filedialog, messagebox, ttk
 
-from esplink import DEMO_PORT, Link, list_serial_ports, parse_protocol_line, serial
+from esplink import DEMO_PORT, Link, PortInfo, list_serial_ports, parse_protocol_line, serial
 
 try:
     import segno
@@ -240,6 +240,8 @@ def find_firmware_bins() -> list[Path]:
 def describe_event(e: dict) -> str:
     t, ev = e.get("type"), e.get("event")
     if t == "hello":
+        if (e.get("uptime") or 0) > 5:
+            return f"ESP32 meldet sich: {e.get('name')} ({e.get('chip')}), läuft seit {fmt_uptime(e.get('uptime'))}"
         return f"ESP32 gestartet: {e.get('name')} ({e.get('chip')}) – Grund: {e.get('reset')}"
     if t == "wifi" and ev == "connected":
         return f"WLAN verbunden: {e.get('ssid')} – IP {e.get('ip')}"
@@ -252,6 +254,77 @@ def describe_event(e: dict) -> str:
     if t == "ap" and ev == "ip":
         return f"Hotspot hat die IP {e.get('ip')} vergeben"
     return json.dumps(e, ensure_ascii=False)
+
+
+DRIVERS = {
+    "10C4": ("CP210x", "https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers"),
+    "1A86": ("CH340", "https://www.wch-ic.com/downloads/CH341SER_EXE.html"),
+    "0403": ("FTDI", "https://ftdichip.com/drivers/vcp-drivers/"),
+}
+CH343_PIDS = ("55D2", "55D3", "55D4")
+CH343_URL = "https://www.wch-ic.com/downloads/CH343SER_EXE.html"
+
+
+def open_error_text(e, short=False) -> str:
+    """Verständliche Erklärung, warum sich ein Port nicht öffnen lässt."""
+    msg = str(e)
+    if re.search(r"(Access is denied|Zugriff verweigert|busy|Resource busy|in use|PermissionError\(13)", msg, re.I) \
+            and not (sys.platform.startswith("linux") and "Permission denied" in msg):
+        return "belegt" if short else ("Der Port wird gerade von einem anderen Programm benutzt. Schließe den "
+                                       "Seriellen Monitor der Arduino IDE, PuTTY, Cura o. Ä.")
+    if re.search(r"Permission denied", msg, re.I):
+        return "keine Berechtigung" if short else ("Keine Berechtigung für den Port. Linux: "
+                                                   "sudo usermod -aG dialout $USER und danach neu anmelden.")
+    if re.search(r"(FileNotFound|No such file|could not open port|nicht gefunden|cannot find)", msg, re.I):
+        return "nicht da" if short else "Der Port ist nicht (mehr) da. Ist der ESP32 noch eingesteckt?"
+    return msg[:40] if short else msg
+
+
+def find_usb_problems() -> list:
+    """Sucht USB-Seriell-Chips, die zwar stecken, aber keinen Port haben.
+
+    Gibt eine Liste aus (Chip, Treiber-Link, Erklärung) zurück.
+    """
+    out = []
+    try:
+        if sys.platform.startswith("win"):
+            ps = ("Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match 'VID_(10C4|1A86|0403)' "
+                  "-and $_.Status -ne 'OK' } | ForEach-Object { $_.InstanceId }")
+            res = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+                                 capture_output=True, text=True, timeout=10, creationflags=0x08000000)
+            seen = set()
+            for line in res.stdout.splitlines():
+                m = re.search(r"VID_([0-9A-F]{4})&PID_([0-9A-F]{4})", line, re.I)
+                if not m or (m.group(1).upper(), m.group(2).upper()) in seen:
+                    continue
+                vid, pid = m.group(1).upper(), m.group(2).upper()
+                seen.add((vid, pid))
+                name, url = DRIVERS[vid]
+                if vid == "1A86" and pid in CH343_PIDS:
+                    name, url = "CH9102/CH343", CH343_URL
+                out.append((name, url, f"USB-Chip {name} gefunden, aber der Treiber fehlt – darum gibt es keinen "
+                                       f"COM-Port. Treiber installieren, dann ESP32 neu einstecken."))
+        elif sys.platform.startswith("linux"):
+            vids = {"10c4": "CP210x", "1a86": "CH340", "0403": "FTDI", "303a": "ESP32 USB"}
+            have_tty = any(Path("/dev").glob("ttyUSB*")) or any(Path("/dev").glob("ttyACM*"))
+            for f in Path("/sys/bus/usb/devices").glob("*/idVendor"):
+                vid = f.read_text().strip().lower()
+                if vid in vids and not have_tty:
+                    hint = ("sudo apt remove brltty (klaut CH340-Ports)" if vid == "1a86"
+                            else "Kernel-Treiber fehlt oder Kabel lädt nur")
+                    out.append((vids[vid], "", f"USB-Chip {vids[vid]} steckt, aber es gibt keinen Port. Tipp: {hint}."))
+                    break
+    except Exception:
+        pass
+    return out
+
+
+def is_garbled(line: str) -> bool:
+    """Zeichensalat (falsche Baudrate)?"""
+    if not line:
+        return False
+    bad = sum(1 for c in line if c == "\ufffd" or (ord(c) < 32 and c not in "\t"))
+    return bad / len(line) > 0.25
 
 
 def pick_font(candidates, fallback):
@@ -572,6 +645,99 @@ class FormDialog(tk.Toplevel):
         self.destroy()
 
 
+class NoDeviceDialog(tk.Toplevel):
+    """Hilfe, wenn kein ESP32 gefunden wird. Verbindet automatisch, sobald einer auftaucht."""
+
+    def __init__(self, app):
+        super().__init__(app)
+        self.app = app
+        self.title("Kein ESP32 gefunden")
+        self.configure(bg=app.theme["card"])
+        self.transient(app)
+        self.resizable(False, False)
+        f = ttk.Frame(self, style="Card.TFrame", padding=22)
+        f.pack(fill="both", expand=True)
+        ttk.Label(f, text="Kein ESP32 gefunden", style="H1.TLabel").pack(anchor="w")
+        ttk.Label(f, text="Sobald einer auftaucht, verbindet sich die App von selbst.", style="CardMuted.TLabel").pack(
+            anchor="w", pady=(2, 14))
+        steps = [
+            "1.  Den ESP32 mit einem Datenkabel anschließen – viele USB-Kabel können nur laden.",
+            "2.  Treiber für den USB-Chip auf dem Board installieren (steht meist neben dem USB-Anschluss):",
+        ]
+        for text in steps:
+            ttk.Label(f, text=text, style="Card.TLabel", wraplength=520, justify="left").pack(anchor="w", pady=2)
+        drv = ttk.Frame(f, style="Card.TFrame")
+        drv.pack(anchor="w", padx=(22, 0), pady=(4, 6))
+        for name, url in (("CP210x", DRIVERS["10C4"][1]), ("CH340", DRIVERS["1A86"][1]), ("CH9102 / CH343", CH343_URL)):
+            ttk.Button(drv, text=f"Treiber {name}", command=lambda u=url: webbrowser.open(u)).pack(side="left", padx=(0, 6))
+        for text in (
+            "3.  Einen anderen USB-Anschluss probieren. Leuchtet eine LED auf dem Board?",
+            "4.  ESP32-S2/S3/C3 ohne extra USB-Chip: BOOT-Taste halten, einstecken, loslassen.",
+        ):
+            ttk.Label(f, text=text, style="Card.TLabel", wraplength=520, justify="left").pack(anchor="w", pady=2)
+        if sys.platform.startswith("linux"):
+            ttk.Label(f, text="Linux: sudo usermod -aG dialout $USER (danach neu anmelden). Verschwindet ein CH340 "
+                              "sofort wieder: sudo apt remove brltty", style="CardMuted.TLabel", wraplength=520,
+                      justify="left").pack(anchor="w", pady=(6, 0))
+        self.status = ttk.Label(f, text="Suche …", style="CardMuted.TLabel", wraplength=520, justify="left")
+        self.status.pack(anchor="w", pady=(14, 0))
+        self.fix = ttk.Frame(f, style="Card.TFrame")
+        self.fix.pack(anchor="w")
+        btns = ttk.Frame(f, style="Card.TFrame")
+        btns.pack(fill="x", pady=(18, 0))
+        ttk.Button(btns, text="Schließen", command=self.destroy).pack(side="right")
+        ttk.Button(btns, text="Demo ausprobieren", command=self._demo).pack(side="right", padx=8)
+        ttk.Button(btns, text="Erneut suchen", style="Accent.TButton", command=self._scan).pack(side="right")
+        self.bind("<Escape>", lambda e: self.destroy())
+        self.update_idletasks()
+        x = app.winfo_rootx() + (app.winfo_width() - self.winfo_width()) // 2
+        y = app.winfo_rooty() + (app.winfo_height() - self.winfo_height()) // 3
+        self.geometry(f"+{max(0, x)}+{max(0, y)}")
+        self._scan()
+        self.after(1500, self._poll)
+
+    def _demo(self):
+        self.destroy()
+        self.app.start_demo()
+
+    def _found(self):
+        esp = [p for p in self.app.port_infos if p.likely_esp]
+        if esp and self.app.state == "off":
+            self.destroy()
+            self.app.notify(f"ESP32 gefunden: {esp[0].label}", "ok")
+            self.app.connect(esp[0])
+            return True
+        return False
+
+    def _scan(self):
+        self.app.refresh_ports()
+        if self._found():
+            return
+        others = [p.device for p in self.app.port_infos if p.device and p.device != DEMO_PORT]
+        self.status.configure(text=("Andere Ports: " + ", ".join(others) + " – oben in der Liste wählen, falls einer "
+                                    "davon der ESP32 ist.") if others else "Noch kein passender USB-Port da …")
+        self.app.check_usb_problems(self._show_problems)
+
+    def _show_problems(self, found):
+        if not self.winfo_exists():
+            return
+        for w in self.fix.winfo_children():
+            w.destroy()
+        for name, url, text in found:
+            ttk.Label(self.fix, text="⚠ " + text, style="Warn.TLabel", wraplength=520, justify="left").pack(
+                anchor="w", pady=(8, 2))
+            if url:
+                ttk.Button(self.fix, text=f"Treiber {name} herunterladen", style="Accent.TButton",
+                           command=lambda u=url: webbrowser.open(u)).pack(anchor="w")
+
+    def _poll(self):
+        if not self.winfo_exists():
+            return
+        self.app.refresh_ports()
+        if not self._found():
+            self.after(1500, self._poll)
+
+
 def ask_string(app, title, label, initial="", message=None):
     d = FormDialog(app, title, [("v", label, initial, None)], message=message)
     return None if d.result is None else d.result["v"]
@@ -722,25 +888,35 @@ class DashboardPage(Page):
 
     def on_connection(self):
         a = self.app
+        key = (a.state, bool(a.fw), a.handshaking, a.wait_reason, any(p.likely_esp for p in a.port_infos))
+        if key == getattr(self, "_conn_key", None):
+            return
+        self._conn_key = key
         if a.state == "off":
-            self.name_lbl.configure(text="Kein ESP32 verbunden")
-            self.sub_lbl.configure(text="Schließe deinen ESP32 per USB-Kabel an, wähle oben den Port und klicke auf "
-                                        "»Verbinden«. Ohne Hardware kannst du alles mit dem Demo-Gerät ausprobieren.")
-            self._set_cta([("Demo ausprobieren", a.start_demo, "TButton"),
-                           ("Verbinden", a.connect, "Accent.TButton")])
+            if key[4]:
+                self.name_lbl.configure(text="ESP32 gefunden – bereit zum Verbinden")
+                self.sub_lbl.configure(text="Klick auf »Verbinden«. Ohne Hardware kannst du alles mit dem Demo-Gerät "
+                                            "ausprobieren.")
+            else:
+                self.name_lbl.configure(text="Kein ESP32 verbunden")
+                self.sub_lbl.configure(text="Schließe deinen ESP32 per USB-Kabel an – die App verbindet sich dann "
+                                            "von selbst. Ohne Hardware kannst du alles mit dem Demo-Gerät ausprobieren.")
+            self._set_cta(([] if key[4] else [("Hilfe zur Verbindung", a.show_no_device, "TButton")]) +
+                          [("Demo ausprobieren", a.start_demo, "TButton"), ("Verbinden", a.connect, "Accent.TButton")])
         elif a.state == "waiting":
             self.name_lbl.configure(text="Warte auf den ESP32 …")
-            self.sub_lbl.configure(text="Die Verbindung ist weg (Kabel? Neustart?). Sobald der Port wieder da ist, "
-                                        "verbindet sich die App automatisch.")
-            self._set_cta([])
+            why = {"belegt": "Der Port ist gerade von einem anderen Programm belegt (Arduino IDE?). ",
+                   "keine Berechtigung": "Keine Berechtigung für den Port. "}.get(a.wait_reason, "")
+            self.sub_lbl.configure(text=why + "Sobald der Port frei ist bzw. der ESP32 wieder da ist, verbindet sich "
+                                              "die App automatisch.")
+            self._set_cta([("Abbrechen", a.disconnect, "TButton")])
         elif not a.fw:
-            self.name_lbl.configure(text="Verbunden – Firmware wird gesucht …" if a.handshaking
+            self.name_lbl.configure(text="Verbunden – suche Studio-Firmware …" if a.handshaking
                                     else "Verbunden, aber keine Studio-Firmware")
             self.sub_lbl.configure(text="Der serielle Monitor funktioniert schon. Für alle anderen Funktionen braucht "
-                                        "der ESP32 die Studio-Firmware (einmalig installieren).")
+                                        "der ESP32 einmalig die Studio-Firmware – das geht mit einem Klick.")
             self._set_cta([] if a.handshaking else [("Erneut prüfen", a.start_handshake, "TButton"),
-                                                    ("Firmware installieren", lambda: a.show_page("flash"),
-                                                     "Accent.TButton")])
+                                                    ("Firmware installieren", a.quick_install, "Accent.TButton")])
         else:
             self._set_cta([])
         if a.fw:
@@ -2288,15 +2464,18 @@ class FlashPage(Page):
     def run_esptool(self, make_args, title, on_done=None, reconnect=True):
         if self.busy:
             return
-        port = self.app.selected_port()
-        if port is None:
-            self.app.notify("Bitte oben zuerst einen Port wählen", "warn")
-            return
+        port = self.app.conn_port if self.app.link.is_open and self.app.conn_port else self.app.selected_port()
+        if port is None or not port.device:
+            esp = [p for p in self.app.port_infos if p.likely_esp]
+            if not esp:
+                self.app.show_no_device()
+                return
+            port = esp[0]
+            self.app._select_port(port.device)
         demo = port.device == DEMO_PORT
         if not demo and not HAS_ESPTOOL:
             messagebox.showerror(APP_NAME, "esptool fehlt.\n\nBitte im Terminal ausführen:\npip install esptool")
             return
-        was_open = self.app.link.is_open
         self.app.release_port()
         self._set_busy(True)
         self.prog["value"] = 0
@@ -2310,7 +2489,7 @@ class FlashPage(Page):
         self.app.cfg["flash_baud"] = int(baud)
         t = threading.Thread(target=self._work, args=(port.device, baud, make_args, demo), daemon=True)
         t.start()
-        self._poll(on_done, port, reconnect or was_open)
+        self._poll(on_done, port, reconnect)
 
     def _work(self, device, baud, make_args, demo):
         if demo:
@@ -2386,6 +2565,45 @@ class FlashPage(Page):
             self.app.reconnect_soon(port)
 
     # -- Aktionen --
+    def auto_install(self):
+        """Ein Klick: Chip erkennen, passende Datei wählen, nachfragen, flashen, neu verbinden."""
+        if self.busy:
+            return
+        self.app.show_page("flash")
+        self.refresh_bins()
+        if not self._bins:
+            self.fw_hint.configure(style="Warn.TLabel")
+            self.app.notify("Keine fertige Firmware-Datei gefunden – siehe »Weg 1« oder »Weg 2«", "warn")
+            return
+
+        def detected(code, out):
+            port = self.app.selected_port()
+            m = re.search(r"(?:Chip is|Chip type:|Detecting chip type\.*)\s*(ESP32[-\w]*)", out)
+            if code != 0 or not m:
+                self._log("Chip nicht erkannt. Prüfe den Port oder versuche es mit gedrückter BOOT-Taste.")
+                if port:
+                    self.app.reconnect_soon(port)
+                return
+            self._chip = m.group(1)
+            key = self._choose_bin_for_chip(self._chip)
+            if not key:
+                self.fw_hint.configure(text=f"Erkannt: {self._chip} – dafür gibt es keine fertige Datei. Bitte Weg 2.")
+                if port:
+                    self.app.reconnect_soon(port)
+                return
+            p = self._selected_bin()
+            self.fw_hint.configure(text=f"Erkannt: {self._chip} → {FIRMWARE_LABELS.get(key, key)}")
+            if not messagebox.askyesno(APP_NAME, f"Erkannt: {self._chip}\n\nStudio-Firmware „{p.name}“ jetzt "
+                                                 "installieren?\nDas bisherige Programm auf dem ESP32 wird ersetzt."):
+                if port:
+                    self.app.reconnect_soon(port)
+                return
+            self.run_esptool(lambda v5: ["write-flash" if v5 else "write_flash", "0x0", str(p)],
+                             "Firmware installieren",
+                             lambda c, o: c == 0 and self.app.notify("Studio-Firmware installiert – verbinde …", "ok"))
+
+        self.run_esptool(lambda v5: ["read-mac" if v5 else "read_mac"], "Chip erkennen", detected, reconnect=False)
+
     def detect(self):
         def done(code, out):
             m = re.search(r"(?:Chip is|Chip type:|Detecting chip type\.*)\s*(ESP32[-\w]*)", out)
@@ -2607,6 +2825,20 @@ class App(tk.Tk):
         self._last_chip = None
         self.port_infos = []
         self._known_ports = None
+        self.conn_port = None
+        self.conn_lines = self.conn_garbage = 0
+        self.conn_saw_bootloader = False
+        self.hs_attempt = 0
+        self.hs_reset_done = self.hs_baud_done = False
+        self.hs_note = ""
+        self.reconnect_since = 0.0
+        self.reconnect_known = set()
+        self.wait_reason = ""
+        self.last_hello = 0.0
+        self._next_driver_check = 0.0
+        self._ui_q: queue.Queue = queue.Queue()
+        self._nodev = None
+        self._usb_shown = set()
         self._raw = []
         self._toasts = []
         self._traffic = ""
@@ -2924,26 +3156,35 @@ class App(tk.Tk):
     # -- Ports & Verbindung ---------------------------------------------------
     def refresh_ports(self, notify=False):
         cur = self.selected_port()
-        cur_dev = cur.device if cur else self.cfg.get("port")
+        cur_dev = cur.device if cur and cur.device else self.cfg.get("port")
         infos = list_serial_ports()
-        devices = {p.device for p in infos}
+        real = [p for p in infos if p.device != DEMO_PORT]
         new = []
         if self._known_ports is not None:
-            new = [p for p in infos if p.device not in self._known_ports and p.device != DEMO_PORT]
-        self._known_ports = devices
+            new = [p for p in real if p.device not in self._known_ports]
+        self._known_ports = {p.device for p in real}
+        if not any(p.likely_esp for p in real):
+            label = "Kein ESP32 erkannt – bitte einstecken" if not real else "Kein ESP32 erkannt – Port wählen"
+            infos = [PortInfo("", label)] + infos
         self.port_infos = infos
         self.port_combo.configure(values=[p.label for p in infos])
-        idx = next((i for i, p in enumerate(infos) if p.device == cur_dev), None)
-        if idx is None and new:
-            idx = infos.index(new[0])
+        idx = next((i for i, p in enumerate(infos) if p.device and p.device == cur_dev), None)
+        likely_new = [p for p in new if p.likely_esp]
+        if likely_new and (idx is None or not infos[idx].likely_esp):
+            idx = infos.index(likely_new[0])
         if idx is None:
             idx = 0
         self.port_combo.current(idx)
-        n = len(infos) - 1
+        n_esp = sum(p.likely_esp for p in real)
         if notify:
-            self.notify(f"{n} serielle{'r' if n == 1 else ''} Port{'s' if n != 1 else ''} gefunden" if n
-                        else "Kein ESP32 gefunden – USB-Kabel (mit Datenleitung!) und Treiber prüfen", "info" if n else "warn")
-        self.side_hint.configure(text="" if n else "Kein USB-Gerät gefunden.\nTreiber: CP210x oder CH340")
+            if n_esp:
+                self.notify(f"{n_esp} ESP32-Port{'s' if n_esp != 1 else ''} gefunden", "ok")
+            elif real:
+                self.notify(f"{len(real)} Port{'s' if len(real) != 1 else ''} gefunden, aber keiner sieht nach ESP32 aus",
+                            "warn")
+            else:
+                self.notify("Kein ESP32 gefunden – Kabel und Treiber prüfen", "warn")
+        self.side_hint.configure(text="" if n_esp else "Kein ESP32 erkannt.\nKabel mit Datenleitung?\nTreiber: CP210x / CH340")
         return new
 
     def _ports_loop(self):
@@ -2952,19 +3193,47 @@ class App(tk.Tk):
             for p in new:
                 self.notify(f"Neues Gerät erkannt: {p.label}", "ok")
                 if self.cfg.get("auto_connect") and p.likely_esp:
-                    self.connect()
+                    self.monitor.log_sys(f"{p.device} wurde eingesteckt – verbinde automatisch")
+                    self.connect(p, silent=True)
                     break
+            if not any(p.likely_esp for p in self.port_infos) and time.time() >= self._next_driver_check:
+                self._next_driver_check = time.time() + 15
+                self.check_usb_problems()
         self.after(2000, self._ports_loop)
 
     def _autostart(self):
         port = self.selected_port()
-        if self.cfg.get("auto_connect") and port and port.device != DEMO_PORT and (
+        if self.cfg.get("auto_connect") and port and port.device and port.device != DEMO_PORT and (
                 port.device == self.cfg.get("port") or port.likely_esp):
-            self.connect()
+            self.connect(port, silent=True)
+        elif not any(p.likely_esp for p in self.port_infos):
+            self._next_driver_check = time.time() + 15
+            self.check_usb_problems()
+
+    def check_usb_problems(self, callback=None):
+        """Im Hintergrund nach USB-Geräten ohne Treiber suchen (Windows/Linux)."""
+        def work():
+            found = find_usb_problems()
+            self._ui_q.put(lambda: self._usb_problems(found, callback))
+        threading.Thread(target=work, daemon=True).start()
+
+    def _usb_problems(self, found, callback=None):
+        if callback:
+            callback(found)
+        if found and self.state == "off" and not self.banner.winfo_ismapped() and found[0][2] not in self._usb_shown:
+            name, url, text = found[0]
+            self._usb_shown.add(text)
+            self._show_banner(text, [("Treiber herunterladen", lambda: webbrowser.open(url))] if url else [])
 
     def selected_port(self):
         i = self.port_combo.current() if hasattr(self, "port_combo") else -1
         return self.port_infos[i] if 0 <= i < len(self.port_infos) else None
+
+    def _select_port(self, device):
+        for i, p in enumerate(self.port_infos):
+            if p.device == device:
+                self.port_combo.current(i)
+                return
 
     def toggle_connect(self):
         if self.state == "off":
@@ -2973,9 +3242,7 @@ class App(tk.Tk):
             self.disconnect()
 
     def start_demo(self):
-        for i, p in enumerate(self.port_infos):
-            if p.device == DEMO_PORT:
-                self.port_combo.current(i)
+        self._select_port(DEMO_PORT)
         self.connect()
 
     def _baud(self):
@@ -2993,32 +3260,48 @@ class App(tk.Tk):
             except Exception as e:
                 self.notify(f"Baudrate nicht änderbar: {e}", "err")
 
-    def connect(self, port=None):
+    def connect(self, port=None, silent=False):
         port = port or self.selected_port()
-        if port is None:
-            self.notify("Kein Port ausgewählt", "warn")
-            return
+        if port is None or not port.device:
+            esp = [p for p in self.port_infos if p.likely_esp]
+            if esp:
+                port = esp[0]
+                self._select_port(port.device)
+            else:
+                if not silent:
+                    self.show_no_device()
+                return
         if serial is None and port.device != DEMO_PORT:
             messagebox.showerror(APP_NAME, "pyserial fehlt.\n\nBitte im Terminal ausführen:\npip install pyserial")
             return
+        self._hide_banner()
         try:
             self.link.open(port.device, self._baud(), port.native_usb)
         except Exception as e:
-            msg = str(e)
-            hint = ""
-            if re.search(r"(Access is denied|Permission|busy|PermissionError)", msg, re.I):
-                hint = ("\n\nDer Port wird schon benutzt. Schließe den Seriellen Monitor der Arduino IDE oder "
-                        "andere Programme.")
-                if sys.platform.startswith("linux"):
-                    hint += "\nUnter Linux evtl.: sudo usermod -aG dialout $USER (danach neu anmelden)"
-            messagebox.showerror(APP_NAME, f"Verbindung zu {port.device} fehlgeschlagen:\n{msg}{hint}")
+            reason = open_error_text(e)
+            self.monitor.log_sys(f"{port.device} lässt sich nicht öffnen: {e}")
+            if silent:
+                self._wait_for(port.device, open_error_text(e, short=True))
+                return
+            if messagebox.askretrycancel(APP_NAME, f"Verbindung zu {port.device} fehlgeschlagen.\n\n{reason}\n\n"
+                                                   "»Wiederholen« = die App versucht es im Hintergrund weiter."):
+                self._wait_for(port.device, open_error_text(e, short=True))
             return
-        self.cfg["port"] = port.device
+        self._opened(port, "Verbunden mit")
+
+    def _opened(self, port, verb):
+        if self._nodev is not None and self._nodev.winfo_exists():
+            self._nodev.destroy()
+        self.conn_port = port
+        if port.device != DEMO_PORT:
+            self.cfg["port"] = port.device
         self.want_connected = True
         self.state = "on"
-        self.monitor.log_sys(f"Verbunden mit {port.label} ({self._baud()} Baud)")
+        self.conn_lines = self.conn_garbage = 0
+        self.conn_saw_bootloader = False
+        self.monitor.log_sys(f"{verb} {port.label} ({self._baud()} Baud)")
         self._update_conn_ui()
-        self.start_handshake(delay=300)
+        self.start_handshake(delay=350)
 
     def disconnect(self):
         self.want_connected = False
@@ -3026,25 +3309,39 @@ class App(tk.Tk):
         self._close_link()
         self.monitor.log_sys("Getrennt")
         self.state = "off"
+        self.handshaking = False
         self._set_fw(None)
         self._update_conn_ui()
 
     def release_port(self):
         """Port für esptool freigeben."""
         self.want_connected = False
+        self.reconnect_port = None
         if self.link.is_open:
             self._close_link()
             self.monitor.log_sys("Port für esptool freigegeben")
         self.state = "off"
+        self.handshaking = False
         self._set_fw(None)
         self._update_conn_ui()
 
     def reconnect_soon(self, port):
+        self._wait_for(port.device, "")
+
+    def _wait_for(self, device, reason):
+        """Im Hintergrund warten, bis sich der Port wieder öffnen lässt."""
         self.want_connected = True
-        self.reconnect_port = port.device
+        self.reconnect_port = device
+        self.reconnect_since = time.time()
+        try:
+            self.reconnect_known = {p.device for p in list_serial_ports()}
+        except Exception:
+            self.reconnect_known = set(self._known_ports or ())
+        self.wait_reason = reason
         self.state = "waiting"
+        self.handshaking = False
         self._update_conn_ui()
-        self.after(1200, self._try_reconnect)
+        self.after(1000, self._try_reconnect)
 
     def _close_link(self):
         self.link.close()
@@ -3061,70 +3358,177 @@ class App(tk.Tk):
         port = self.link.port
         self._close_link()
         self.monitor.log_sys(f"Verbindung verloren: {reason}")
+        self.handshaking = False
         self._set_fw(None)
         if self.cfg.get("auto_reconnect") and self.want_connected and port:
-            self.reconnect_port = port
-            self.state = "waiting"
-            self.after(1000, self._try_reconnect)
+            self._wait_for(port, "")
         else:
             self.state = "off"
             self.notify("Verbindung zum ESP32 verloren", "warn")
-        self._update_conn_ui()
+            self._update_conn_ui()
 
     def _try_reconnect(self):
         if self.state != "waiting" or not self.reconnect_port:
             return
         infos = list_serial_ports()
         match = next((p for p in infos if p.device == self.reconnect_port), None)
-        if match:
-            try:
-                self.link.open(match.device, self._baud(), match.native_usb)
-            except Exception:
-                self.after(1200, self._try_reconnect)
-                return
-            self.port_infos = infos
-            self.port_combo.configure(values=[p.label for p in infos])
-            self.port_combo.current(infos.index(match))
-            self.state = "on"
-            self.monitor.log_sys(f"Wieder verbunden mit {match.label}")
-            self.notify("Wieder verbunden", "ok")
+        if match is None and time.time() - self.reconnect_since > 4:
+            # Nativer USB bekommt nach einem Neustart manchmal einen neuen COM-Port
+            moved = [p for p in infos if p.likely_esp and p.device not in self.reconnect_known]
+            if moved:
+                match = moved[0]
+                self.monitor.log_sys(f"Der ESP32 ist jetzt an {match.device}")
+        if match is None:
+            self.wait_reason = ""
             self._update_conn_ui()
-            self.start_handshake(delay=400)
-        else:
             self.after(1200, self._try_reconnect)
+            return
+        try:
+            self.link.open(match.device, self._baud(), match.native_usb)
+        except Exception as e:
+            self.wait_reason = open_error_text(e, short=True)
+            self._update_conn_ui()
+            self.after(1500, self._try_reconnect)
+            return
+        self.port_infos = [p for p in infos]
+        self.port_combo.configure(values=[p.label for p in infos])
+        self._select_port(match.device)
+        self.notify("Verbunden", "ok")
+        self._opened(match, "Verbunden mit")
 
-    def start_handshake(self, delay=0):
+    # -- Firmware suchen ---------------------------------------------------------
+    def start_handshake(self, delay=0, fresh=True):
+        if fresh:
+            self.hs_attempt = 0
+            self.hs_reset_done = False
+            self.hs_baud_done = False
         self.handshaking = True
-        self.handshake_attempts = 0
+        self.hs_note = ""
         self._hide_banner()
         self._update_conn_ui()
         self.after(delay, self._handshake)
 
     def _handshake(self):
-        if not self.link.is_open:
+        if not self.link.is_open or self.fw:
             self.handshaking = False
+            self._update_conn_ui()
             return
-        self.handshake_attempts += 1
-        self.cmd("ping", ok=self._on_ping, err=self._ping_failed, timeout=1.5, quiet=True, need_fw=False)
+        self.hs_attempt += 1
+        self.hs_note = ""
+        self._update_conn_ui()
+        self.cmd("ping", ok=self._on_ping, err=self._ping_failed, timeout=1.3 if self.hs_attempt == 1 else 1.8,
+                 quiet=True, need_fw=False)
 
     def _on_ping(self, d):
         self.handshaking = False
         self._set_fw(d)
         self.refresh_info()
 
+    def _looks_garbled(self):
+        return self.conn_lines >= 2 and self.conn_garbage / self.conn_lines > 0.5
+
     def _ping_failed(self, _msg):
-        if not self.link.is_open:
-            self.handshaking = False
+        if not self.link.is_open or self.fw:
             return
-        if self.handshake_attempts < 3:
-            self.after(900, self._handshake)
+        if self.hs_attempt < 2:
+            self.after(400, self._handshake)
+            return
+        if self._looks_garbled() and self._baud() != 115200 and not self.hs_baud_done:
+            self.hs_baud_done = True
+            self.monitor.log_sys("Nur Zeichensalat – versuche 115200 Baud (Standard der Studio-Firmware)")
+            self.baud_var.set("115200")
+            self._baud_changed()
+            self.conn_lines = self.conn_garbage = 0
+            self.hs_attempt = 0
+            self.after(300, self._handshake)
+            return
+        if not self.hs_reset_done and not self.link.is_demo:
+            self.hs_reset_done = True
+            self.hs_note = "starte den ESP32 neu …"
+            self.monitor.log_sys("Keine Antwort – starte den ESP32 einmal neu und suche erneut")
+            try:
+                self.link.transport.hard_reset()
+            except Exception:
+                pass
+            self.hs_attempt = 0
+            self._update_conn_ui()
+            self.after(2500, self._handshake)
             return
         self.handshaking = False
         self._set_fw(None)
-        self._show_banner("Keine Studio-Firmware gefunden – der Monitor funktioniert, für alles andere bitte "
-                          "die Firmware installieren.",
-                          [("Firmware installieren", lambda: self.show_page("flash")),
-                           ("Erneut prüfen", self.start_handshake)])
+        self._diagnose()
+
+    def _diagnose(self):
+        port = self.link.port or "?"
+        others = [p for p in self.port_infos if p.device and p.device not in (DEMO_PORT, port)]
+        retry = ("Erneut prüfen", self.start_handshake)
+        install = ("Studio-Firmware installieren", self.quick_install)
+        if self.conn_saw_bootloader:
+            text = "Der ESP32 steckt im Bootloader-Modus und wartet auf eine Firmware."
+            buttons = [install, ("Hard-Reset", self.hard_reset)]
+        elif self.link.rx_since_open == 0:
+            text = (f"Von {port} kommt gar nichts. Ist das der richtige Port? Sonst einmal die EN/RST-Taste "
+                    "am ESP32 drücken.")
+            buttons = ([("Anderen Port probieren", self.try_next_port)] if others else []) + [install, retry]
+        elif self._looks_garbled():
+            text = "Nur Zeichensalat empfangen – das Programm auf dem ESP32 nutzt eine andere Baudrate."
+            buttons = [("Baudrate suchen", self.scan_baud), install]
+        else:
+            text = "Auf dem ESP32 läuft ein anderes Programm (keine Studio-Firmware). Der Monitor funktioniert."
+            buttons = [install, retry]
+        self.monitor.log_sys(text)
+        self._show_banner(text, buttons)
+
+    def try_next_port(self):
+        cur = self.link.port
+        cands = [p for p in self.port_infos if p.device and p.device != DEMO_PORT]
+        if not cands:
+            return
+        idx = next((i for i, p in enumerate(cands) if p.device == cur), -1)
+        nxt = cands[(idx + 1) % len(cands)]
+        self.disconnect()
+        self._select_port(nxt.device)
+        self.connect(nxt)
+
+    def quick_install(self):
+        self._hide_banner()
+        self.pages["flash"].auto_install()
+
+    def scan_baud(self):
+        """Probiert gängige Baudraten und nimmt die mit dem lesbarsten Text."""
+        if not self.link.is_open:
+            return
+        self._hide_banner()
+        rates = [115200, 9600, 57600, 74880, 230400, 460800, 921600, 38400, 19200]
+        results = {}
+        self.monitor.log_sys("Suche die passende Baudrate …")
+
+        def step(i):
+            if not self.link.is_open:
+                return
+            if i > 0:
+                lines, garbage = self.conn_lines - self._scan_start[0], self.conn_garbage - self._scan_start[1]
+                results[rates[i - 1]] = (lines - garbage, -garbage)
+            if i >= len(rates):
+                best = max(results, key=lambda r: results[r])
+                good = results[best][0] > 0
+                self.baud_var.set(str(best if good else 115200))
+                self._baud_changed()
+                self.notify(f"Baudrate {best} passt am besten" if good else "Keine lesbare Ausgabe gefunden",
+                            "ok" if good else "warn")
+                return
+            self.link.transport.set_baud(rates[i])
+            self.baud_var.set(str(rates[i]))
+            self._scan_start = (self.conn_lines, self.conn_garbage)
+            self.after(1500, lambda: step(i + 1))
+
+        step(0)
+
+    def show_no_device(self):
+        if self._nodev and self._nodev.winfo_exists():
+            self._nodev.lift()
+            return
+        self._nodev = NoDeviceDialog(self)
 
     def _set_fw(self, d):
         had = self.fw is not None
@@ -3135,11 +3539,14 @@ class App(tk.Tk):
         if d is not None and not had:
             self._hide_banner()
             self.monitor.log_sys(f"Studio-Firmware {d.get('version', '?')} erkannt: {d.get('name', '')}")
+            if self.link.port and self.link.port != DEMO_PORT:
+                self.cfg["port"] = self.link.port
         self._update_conn_ui()
         for p in self.pages.values():
             p.on_connection()
 
     def _update_conn_ui(self):
+        port = self.link.port if self.link.port != DEMO_PORT else "Demo"
         if self.state == "off":
             self.conn_dot.set("muted")
             self.conn_lbl.configure(text="Getrennt")
@@ -3147,22 +3554,26 @@ class App(tk.Tk):
             self.title(APP_NAME)
         elif self.state == "waiting":
             self.conn_dot.set("warn")
-            self.conn_lbl.configure(text="Warte auf ESP32 …")
+            why = f" ({self.wait_reason})" if self.wait_reason else ""
+            self.conn_lbl.configure(text=f"Warte auf {self.reconnect_port or 'ESP32'} …{why}")
             self.conn_btn.configure(text="Abbrechen", style="TButton")
         else:
             name = (self.info.get("name") or (self.fw or {}).get("name")) if self.fw else None
-            port = self.link.port if self.link.port != DEMO_PORT else "Demo"
             if self.fw:
                 self.conn_dot.set("ok")
                 self.conn_lbl.configure(text=f"{name}  ·  {port}")
                 self.title(f"{APP_NAME} – {name} ({port})")
             elif self.handshaking:
                 self.conn_dot.set("info")
-                self.conn_lbl.configure(text=f"Verbunden ({port}) – suche Firmware …")
+                step = self.hs_note or f"suche Firmware{' (Versuch %d)' % self.hs_attempt if self.hs_attempt > 1 else ''} …"
+                self.conn_lbl.configure(text=f"{port} – {step}")
             else:
                 self.conn_dot.set("warn")
-                self.conn_lbl.configure(text=f"Verbunden ({port}) – ohne Studio-Firmware")
+                self.conn_lbl.configure(text=f"{port} – ohne Studio-Firmware")
             self.conn_btn.configure(text="Trennen", style="TButton")
+        for p in self.pages.values():
+            if isinstance(p, DashboardPage):
+                p.on_connection()
 
     # -- Befehle --------------------------------------------------------------
     def cmd(self, name, *args, ok=None, err=None, timeout=4.0, quiet=False, need_fw=True):
@@ -3200,12 +3611,21 @@ class App(tk.Tk):
         try:
             for _ in range(400):
                 item = self.link.events.get_nowait()
+                if item[-1] != self.link.gen or not self.link.is_open:
+                    continue  # Rest einer alten Verbindung
                 if item[0] == "line":
-                    self._on_line(item[1], item[2] if len(item) > 2 else time.perf_counter())
+                    self._on_line(item[1], item[2])
                 elif item[0] == "lost":
                     self.on_lost(item[1])
+                elif item[0] == "write_timeout":
+                    self.monitor.log_sys("Der ESP32 nimmt keine Daten an (hängt er oder ist er im Bootloader?)")
         except queue.Empty:
             pass
+        while True:
+            try:
+                self._ui_q.get_nowait()()
+            except queue.Empty:
+                break
         now = time.time()
         for rid in [r for r, p in self.pending.items() if p["deadline"] < now]:
             p = self.pending.pop(rid)
@@ -3221,10 +3641,18 @@ class App(tk.Tk):
     def _on_line(self, line, t_recv):
         parsed = parse_protocol_line(line)
         if parsed is None:
+            self.conn_lines += 1
+            if is_garbled(line):
+                self.conn_garbage += 1
             self.monitor.log_rx(line)
             if "waiting for download" in line:
-                self._show_banner("Der ESP32 ist im Bootloader-Modus (wartet auf eine Firmware).",
-                                  [("Hard-Reset", self.hard_reset), ("Zum Flashen", lambda: self.show_page("flash"))])
+                self.conn_saw_bootloader = True
+                if self.fw:
+                    self._set_fw(None)
+                if not self.handshaking:
+                    self._show_banner("Der ESP32 ist im Bootloader-Modus (wartet auf eine Firmware).",
+                                      [("Studio-Firmware installieren", self.quick_install),
+                                       ("Hard-Reset", self.hard_reset)])
             return
         kind, rid, data = parsed
         if kind == "R":
@@ -3245,10 +3673,15 @@ class App(tk.Tk):
     def _on_event(self, e):
         t, ev = e.get("type"), e.get("event")
         if t == "hello":
+            self.last_hello = time.time()
+            self.conn_saw_bootloader = False
             if self.fw is None:
                 self.handshaking = False
                 self._set_fw(e)
-            self.notify(f"ESP32 gestartet ({e.get('reset', '?')})")
+            if (e.get("uptime") or 0) > 5:
+                self.notify(f"ESP32 erkannt: {e.get('name', '')}", "ok")
+            else:
+                self.notify(f"ESP32 gestartet ({e.get('reset', '?')})")
             self.after(300, self.refresh_info)
         elif t == "wifi":
             self.notify(describe_event(e), "ok" if ev == "connected" else "warn")
@@ -3314,14 +3747,25 @@ class App(tk.Tk):
         if not self.link.is_open:
             self.notify("Nicht verbunden", "warn")
             return
+        had_fw, t0 = bool(self.fw), time.time()
         try:
             self.link.transport.hard_reset()
             self.monitor.log_sys("Hard-Reset über EN/RTS ausgelöst")
             self._hide_banner()
+            self.conn_saw_bootloader = False
             if not self.fw:
-                self.start_handshake(delay=1200)
+                self.start_handshake(delay=1500)
         except Exception as e:
             self.notify(f"Reset über USB nicht möglich ({e}). Drück die EN/RST-Taste am Board.", "err")
+            return
+
+        def fallback():
+            # ESP32-S2 & Co. (TinyUSB) lassen sich über die Leitungen nicht resetten
+            if had_fw and self.link.is_open and self.fw and self.last_hello < t0:
+                self.monitor.log_sys("Reset über die Leitungen hat nicht gewirkt – starte per Befehl neu")
+                self.cmd("restart", quiet=True)
+
+        self.after(2500, fallback)
 
     def enter_bootloader(self):
         if not self.link.is_open:

@@ -208,6 +208,7 @@ int pwmPins[6] = {-1, -1, -1, -1, -1, -1};
 uint32_t pwmFreq[6];
 
 String lineBuf;
+bool hostWasConnected = false;
 
 // Ein empfangener Befehl
 struct Ctx {
@@ -1544,6 +1545,13 @@ void readSerial() {
 // ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
+void sendHello() {
+  Json j;
+  j.add("type", "hello").add("fw", FW_NAME).add("version", FW_VERSION).add("name", cfg.name);
+  j.add("chip", ESP.getChipModel()).add("reset", resetReason()).add("uptime", (unsigned long)(millis() / 1000));
+  emit(j);
+}
+
 void setup() {
   Serial.setRxBufferSize(1024);
   Serial.begin(SERIAL_BAUD);
@@ -1576,13 +1584,19 @@ void setup() {
   Serial.printf(" %s | %s\n", cfg.name.c_str(), ESP.getChipModel());
   Serial.println(" Tippe 'help' fuer alle Befehle");
   Serial.println("==============================");
-  Json j;
-  j.add("type", "hello").add("fw", FW_NAME).add("version", FW_VERSION).add("name", cfg.name);
-  j.add("chip", ESP.getChipModel()).add("reset", resetReason());
-  emit(j);
+  sendHello();
+  hostWasConnected = (bool)Serial;
 }
 
 void loop() {
+  // Bei nativem USB merkt der ESP32, wenn die App den Port öffnet,
+  // und meldet sich sofort (bei USB-UART-Chips ist Serial immer "true").
+  bool host = (bool)Serial;
+  if (host && !hostWasConnected) {
+    delay(30);
+    sendHello();
+  }
+  hostWasConnected = host;
   readSerial();
   pumpEvents();
   if (webOn) server.handleClient();

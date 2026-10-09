@@ -47,6 +47,7 @@ class PortInfo:
     label: str
     likely_esp: bool = False
     native_usb: bool = False
+    chip: str = ""
 
 
 def list_serial_ports() -> list[PortInfo]:
@@ -65,7 +66,7 @@ def list_serial_ports() -> list[PortInfo]:
                 label = f"{p.device}  –  {chip}" + (f" ({desc})" if desc and chip not in desc else "")
             else:
                 label = f"{p.device}" + (f"  –  {desc}" if desc else "")
-            ports.append(PortInfo(p.device, label, bool(chip), native))
+            ports.append(PortInfo(p.device, label, bool(chip), native, chip or ""))
     ports.sort(key=lambda x: (not x.likely_esp, x.device))
     ports.append(PortInfo(DEMO_PORT, "Demo-Gerät (ohne Hardware)"))
     return ports
@@ -132,7 +133,16 @@ def parse_protocol_line(line: str):
 # Transporte
 # ---------------------------------------------------------------------------
 class SerialTransport:
-    """Echte serielle Schnittstelle (USB)."""
+    """Echte serielle Schnittstelle (USB).
+
+    Steuerleitungen beim ESP32:
+    * Boards mit USB-UART-Chip (CP210x, CH340 …): DTR/RTS hängen an EN und
+      BOOT. Beide aus = ESP32 läuft normal weiter, kein Neustart.
+    * Nativer USB (ESP32-S2/S3/C3/C6): Hier muss DTR an sein, sonst schickt
+      die Firmware (TinyUSB) gar nichts. DTR und RTS gemeinsam an ist dort
+      der neutrale Zustand. Immer erst DTR, dann RTS setzen – andersherum
+      wertet der ESP32 das als Reset-Folge.
+    """
 
     def __init__(self, port: str, baud: int, native_usb: bool = False):
         if serial is None:
@@ -143,14 +153,26 @@ class SerialTransport:
         self.ser.baudrate = baud
         self.ser.timeout = 0.05
         self.ser.write_timeout = 2
-        # DTR/RTS vor dem Öffnen loslassen, sonst startet der ESP32 neu
-        # oder landet im Bootloader.
         try:
             self.ser.dtr = False
             self.ser.rts = False
         except Exception:
             pass
         self.ser.open()
+        if native_usb:
+            self.idle()
+
+    def idle(self) -> None:
+        """Steuerleitungen in den neutralen Zustand bringen."""
+        try:
+            if self.native:
+                self.ser.dtr = True
+                self.ser.rts = True
+            else:
+                self.ser.dtr = False
+                self.ser.rts = False
+        except Exception:
+            pass  # manche Treiber/virtuelle Ports kennen keine Steuerleitungen
 
     def read(self) -> bytes:
         n = self.ser.in_waiting
@@ -174,6 +196,9 @@ class SerialTransport:
         self.ser.rts = True
         time.sleep(0.2 if self.native else 0.12)
         self.ser.rts = False
+        if self.native:
+            time.sleep(0.3)
+            self.idle()
 
     def bootloader(self) -> None:
         """In den Download-Modus starten (wie BOOT gedrückt halten + EN)."""
@@ -202,21 +227,26 @@ class SerialTransport:
 
 
 class Link:
-    """Hält die Verbindung und liest im Hintergrund.
+    """Hält die Verbindung, liest und schreibt im Hintergrund.
 
-    Der Lese-Thread legt Zeilen in ``events`` ab. Die GUI holt sie im
-    Hauptthread ab, damit Tkinter nur aus einem Thread benutzt wird.
+    Die Threads legen Ereignisse in ``events`` ab, die GUI holt sie im
+    Hauptthread ab (Tkinter darf nur aus einem Thread benutzt werden).
+    Jedes Ereignis trägt die Nummer der Verbindung (``gen``), damit Reste
+    einer alten Verbindung ignoriert werden können.
     """
 
     def __init__(self):
         self.events: queue.Queue = queue.Queue()
         self.transport = None
         self.port = None
-        self._thread = None
+        self.gen = 0
+        self._threads = []
         self._stop = threading.Event()
+        self._wq: queue.Queue = queue.Queue()
         self._next_id = 1
         self.rx_bytes = 0
         self.tx_bytes = 0
+        self.rx_since_open = 0
 
     @property
     def is_open(self) -> bool:
@@ -228,24 +258,31 @@ class Link:
 
     def open(self, port: str, baud: int, native_usb: bool = False) -> None:
         self.close()
-        if port == DEMO_PORT:
-            self.transport = DemoTransport()
-        else:
-            self.transport = SerialTransport(port, baud, native_usb)
+        transport = DemoTransport() if port == DEMO_PORT else SerialTransport(port, baud, native_usb)
+        self.transport = transport
         self.port = port
-        self._stop.clear()
-        self._thread = threading.Thread(target=self._reader, args=(self.transport,), daemon=True)
-        self._thread.start()
+        self.gen += 1
+        self.rx_since_open = 0
+        self._stop = threading.Event()
+        self._wq = queue.Queue()
+        self._threads = [
+            threading.Thread(target=self._reader, args=(transport, self.gen, self._stop), daemon=True),
+            threading.Thread(target=self._writer, args=(transport, self.gen, self._stop, self._wq), daemon=True),
+        ]
+        for t in self._threads:
+            t.start()
 
     def close(self) -> None:
         self._stop.set()
+        self._wq.put(None)
         t = self.transport
         self.transport = None
         if t is not None:
             t.close()
-        if self._thread and self._thread is not threading.current_thread():
-            self._thread.join(timeout=1)
-        self._thread = None
+        for th in self._threads:
+            if th is not threading.current_thread():
+                th.join(timeout=1)
+        self._threads = []
 
     def next_id(self) -> int:
         i = self._next_id
@@ -253,11 +290,10 @@ class Link:
         return i
 
     def write_line(self, text: str, ending: str = "\n") -> None:
+        """Zeile zum Senden einreihen – blockiert nie die Oberfläche."""
         if not self.transport:
             raise RuntimeError("Nicht verbunden")
-        data = (text + ending).encode("utf-8")
-        self.transport.write(data)
-        self.tx_bytes += len(data)
+        self._wq.put((text + ending).encode("utf-8"))
 
     def send_command(self, cmd: str, *args) -> int:
         rid = self.next_id()
@@ -265,24 +301,41 @@ class Link:
         self.write_line(" ".join(parts))
         return rid
 
-    def _reader(self, transport) -> None:
+    def _writer(self, transport, gen, stop, wq) -> None:
+        while not stop.is_set():
+            data = wq.get()
+            if data is None or stop.is_set():
+                return
+            try:
+                transport.write(data)
+                self.tx_bytes += len(data)
+            except Exception as e:
+                if stop.is_set():
+                    return
+                timeout = serial is not None and isinstance(e, getattr(serial, "SerialTimeoutException", ()))
+                self.events.put(("write_timeout" if timeout else "lost", str(e) or type(e).__name__, gen))
+                if not timeout:
+                    return
+
+    def _reader(self, transport, gen, stop) -> None:
         buf = b""
-        while not self._stop.is_set():
+        while not stop.is_set():
             try:
                 data = transport.read()
             except Exception as e:  # Kabel gezogen, Port weg ...
-                if not self._stop.is_set():
-                    self.events.put(("lost", str(e)))
+                if not stop.is_set():
+                    self.events.put(("lost", str(e) or type(e).__name__, gen))
                 return
             if not data:
                 continue
             self.rx_bytes += len(data)
+            self.rx_since_open += len(data)
             buf += data
             while b"\n" in buf:
                 raw, buf = buf.split(b"\n", 1)
-                self.events.put(("line", raw.decode("utf-8", "replace").rstrip("\r"), time.perf_counter()))
+                self.events.put(("line", raw.decode("utf-8", "replace").rstrip("\r"), time.perf_counter(), gen))
             if len(buf) > 4096:  # sehr lange Zeile ohne Umbruch
-                self.events.put(("line", buf.decode("utf-8", "replace"), time.perf_counter()))
+                self.events.put(("line", buf.decode("utf-8", "replace"), time.perf_counter(), gen))
                 buf = b""
 
 
@@ -368,7 +421,7 @@ class DemoTransport:
             self._send(line, d)
             d += 0.01
         self._event({"type": "hello", "fw": "ESP32 Studio", "version": "1.0.0", "name": self.name,
-                     "chip": "ESP32-D0WD-V3", "reset": reason}, d)
+                     "chip": "ESP32-D0WD-V3", "reset": reason, "uptime": 0}, d)
         if self.saved_ssid:
             self.sta = {"ssid": self.saved_ssid, "ip": "192.168.178.57", "rssi": -52}
             self._event({"type": "wifi", "event": "connected", "ssid": self.saved_ssid,
